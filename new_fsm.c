@@ -12,14 +12,17 @@ struct fsm_event START_EVENT = {1, NULL};
 struct fsm_event _END_POINTER = {-1, NULL};
 struct fsm_event _NONE_EVENT = {-2, NULL};
 
+
+/*! Just a example callback function
+ */
 void callback(const struct fsm_context *context) {
     printf("Callback : event uid : %d \n", context->event.uid);
 }
 
-/*
- * This function simplify the step creation.
+/*! Simplify step creation.
  *
- *
+ *  Create a step from a function and a void pointer as argument for it.
+ *  This function initialize transition to TRANS_ENDPOINT, a null transition
  *
  */
 struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void *args) {
@@ -31,6 +34,12 @@ struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void *args
     return result;
 }
 
+/*! Connect two step with an event by creating a transition
+ *
+ * Create a transition for the given event which refer to the \a to step and
+ * attach it to the \a from step
+ *
+ */
 void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
     struct fsm_trans transition = {
             .event_uid = event_uid,
@@ -39,6 +48,12 @@ void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
     from->transition = transition;
 }
 
+/*! Create a pointer wich is the main part of a FSM
+ *
+ * Create a pointer with \a first_step as current step. Do not start it and just init other
+ * thread vars
+ *
+ */
 struct fsm_pointer create_pointer(struct fsm_step first_step)
 {
     struct fsm_pointer pointer = {
@@ -52,8 +67,11 @@ struct fsm_pointer create_pointer(struct fsm_step first_step)
     return pointer;
 }
 
-
-
+/*! Start the given pointer in a thread
+ *
+ * Check if the pointer isn't already started, if not start it in a new thread
+ *
+ */
 void start_pointer(struct fsm_pointer *pointer) {
     if ( pointer->started != 0 ){
         printf("CRITICAL : A pointer must be started only once");
@@ -72,12 +90,26 @@ void start_pointer(struct fsm_pointer *pointer) {
     (*_pt).input_event = pointer->input_event;
     (*_pt).started = pointer->started;*/
 
+/*! Main loop for the pointer thread, run step and wait for event
+ *
+ * The main loop of a pointer thread execute a step and wait for a transition
+ * when this one ended.
+ *
+ * This function shouldn't be called from an other place that start_pointer function
+ *
+ * NOT FULLY IMPLEMENTED
+ */
 void *pointer_loop(void *_pointer) {
     struct fsm_pointer *pointer = _pointer;
     start_step(pointer->current_step, START_EVENT);
     return NULL;
 }
 
+/*! Start a step function with the appropriate context
+ *
+ * Create the appropriate context and start the step function with it
+ *
+ */
 void start_step(struct fsm_step step, struct fsm_event event) {
     struct fsm_context init_context = {
             .event = event,
