@@ -63,7 +63,7 @@ extern struct fsm_event _END_POINTER;
 extern struct fsm_event _NONE_EVENT;
 extern struct fsm_transition TRANS_ENDPOINT;
 
-extern struct fsm_queue *_all_steps_created;
+//static struct fsm_queue *_all_steps_created;
 
 
 #endif //FSM_NEW_FSM_H

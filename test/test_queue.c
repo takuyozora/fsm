@@ -16,6 +16,7 @@
 
 
 #include "fsm_queue.h"
+#include "debug.h"
 #include "pthread.h"
 
 void test_queue_push_pop_order(){
@@ -49,6 +50,10 @@ void test_queue_push_pop_order(){
     assert_int_not_equal(*pValuePop1, *pValuePop3);
     assert_int_not_equal(*pValuePop2, *pValuePop3);
 
+    free(pValue1);
+    free(pValue2);
+    free(pValue3);
+
     cleanup_fsm_queue(&queue);
 }
 
@@ -64,10 +69,11 @@ void * _test_queue_signal_producer(void * _queue){
 
 void test_queue_signal(){
     struct fsm_queue queue = create_fsm_queue();
-    pthread_t thread;
     int wait = 0;
+    pthread_t thread;
     for(int i=0; i<100; i++) {
-        pthread_create(&thread, NULL, &_test_queue_signal_producer, (void *) &queue);
+        pthread_create(&thread, NULL, _test_queue_signal_producer, (void *) &queue);
+        pthread_mutex_lock(&queue.mutex);
         while (queue.first == NULL) {
             pthread_cond_wait(&queue.cond, &queue.mutex);
             wait++;
@@ -75,10 +81,14 @@ void test_queue_signal(){
         pthread_mutex_unlock(&queue.mutex);
         int *pValue = pop_front_fsm_queue(&queue);
         assert_int_equal(42, *pValue);
+        free(pValue);
         cleanup_fsm_queue(&queue);
-        pthread_join(thread, NULL);
+        while(pthread_join(thread, NULL) != 0){
+            debug("Error on loop %d joining thread ", i);
+        }
     }
     assert_int_not_equal(wait, 0); // Just to be sure than at least one turn test the wait way
+
 }
 
 int main(void)

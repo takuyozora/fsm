@@ -15,7 +15,7 @@ struct fsm_transition TRANS_ENDPOINT = {0, NULL};
 struct fsm_event START_EVENT = {1, NULL};
 struct fsm_event _END_POINTER = {-1, NULL};
 struct fsm_event _NONE_EVENT = {-2, NULL};
-struct fsm_queue *_all_steps_created = NULL;
+static struct fsm_queue *_all_steps_created = NULL;
 
 
 /*! Just a example callback function

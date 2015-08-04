@@ -23,12 +23,12 @@ add_test(test_queue test_queue)
 add_test(test_fsm test_fsm)
 add_test(test_fsm_valgrind valgrind
          --error-exitcode=1 --read-var-info=yes
-         --leak-check=yes --show-leak-kinds=all
+         --leak-check=full --show-leak-kinds=all
          --track-origins=yes
          ./test_fsm)
 add_test(test_queue_valgrind valgrind
                   --error-exitcode=1 --read-var-info=yes
-                  --leak-check=yes --show-leak-kinds=all
+                  --leak-check=full --show-leak-kinds=all
                   --track-origins=yes
                   ./test_queue)
 target_link_libraries(test_queue cmocka)
