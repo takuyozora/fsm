@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include "fsm.h"
 #include "fsm_event_queue.h"
+#include "fsm_transition_queue.h"
 #include "stdio.h"
 #include "debug.h"
 
 
-struct fsm_trans TRANS_ENDPOINT = {0, NULL};
+struct fsm_transition TRANS_ENDPOINT = {0, NULL};
 struct fsm_event START_EVENT = {1, NULL};
 struct fsm_event _END_POINTER = {-1, NULL};
 struct fsm_event _NONE_EVENT = {-2, NULL};
@@ -18,7 +19,7 @@ struct fsm_event _NONE_EVENT = {-2, NULL};
 /*! Just a example callback function
  */
 void * callback(const struct fsm_context *context) {
-    //log_info("Callback : event uid : %d \n", context->event.uid);
+    log_info("Callback : event uid : %d, args : %d \n", context->event.uid, *(int *)context->fnct_args);
     return NULL;
 }
 
@@ -32,7 +33,7 @@ struct fsm_step create_step(void * (*fnct)(const struct fsm_context *), void *ar
     struct fsm_step result = {
             .fnct = fnct,
             .args = args,
-            .transition = TRANS_ENDPOINT,
+            .transitions = create_fsm_queue_pointer(),
     };
     return result;
 }
@@ -44,11 +45,11 @@ struct fsm_step create_step(void * (*fnct)(const struct fsm_context *), void *ar
  *
  */
 void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
-    struct fsm_trans transition = {
+    struct fsm_transition transition = {
             .event_uid = event_uid,
             .next_step = to,
     };
-    from->transition = transition;
+    push_back_fsm_transition_queue(from->transitions, &transition);
 }
 
 /*! Create a pointer wich is the main part of a FSM
@@ -57,7 +58,7 @@ void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
  * thread vars
  *
  */
-struct fsm_pointer * create_pointer(struct fsm_step first_step)
+struct fsm_pointer * create_pointer(struct fsm_step *first_step)
 {
     struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
     pointer->thread = 0;
@@ -95,11 +96,12 @@ void start_pointer(struct fsm_pointer *pointer) {
 void *pointer_loop(void * _pointer) {
     struct fsm_pointer * pointer = _pointer;
     struct fsm_step * ret_step;
-    struct fsm_event * new_event = 0;
-    ret_step = start_step(pointer->current_step, START_EVENT);
+    struct fsm_event * new_event = NULL;
+    struct fsm_transition * reachable_transition = NULL;
+    ret_step = start_step(pointer, pointer->current_step, &START_EVENT);
     while (1){
         if(ret_step != NULL){
-            ret_step = start_step(*ret_step, _NONE_EVENT);
+            ret_step = start_step(pointer, ret_step, &_NONE_EVENT);
             continue;
         }
         new_event = get_event_or_wait(&pointer->input_event);
@@ -109,8 +111,9 @@ void *pointer_loop(void * _pointer) {
                 free(new_event);
                 break;
             }
-            if (new_event->uid == pointer->current_step.transition.event_uid){
-                ret_step = start_step(*pointer->current_step.transition.next_step, *new_event);
+            reachable_transition = get_reachable_condition(pointer->current_step->transitions, new_event);
+            if (reachable_transition != NULL){
+                ret_step = start_step(pointer, reachable_transition->next_step, new_event);
                 free(new_event);
                 continue;
             }
@@ -128,13 +131,14 @@ void *pointer_loop(void * _pointer) {
  * Create the appropriate context and start the step function with it
  *
  */
-struct fsm_step * start_step(struct fsm_step step, struct fsm_event event) {
+struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
     struct fsm_context init_context = {
-            .event = event,
-            .fnct_args = step.args,
+            .event = *event,
+            .fnct_args = step->args,
     };
+    pointer->current_step = step;
     //debug("Step by event %u", event.uid);
-    return step.fnct(&init_context);
+    return step->fnct(&init_context);
 }
 
 struct fsm_event *signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {

@@ -55,47 +55,47 @@ void test_fsm(){
 }
 
 
-
-void old_test_new_fsm(){
-    struct fsm_step step_0 = {
-            .fnct = &callback,
-            .args = NULL,
-            .transition = TRANS_ENDPOINT,
-    }, step_1 = {
-            .fnct = &callback,
-            .args = NULL,
-            .transition = TRANS_ENDPOINT,
-    };
-    struct fsm_trans trans_0_1 = {
-            .event_uid = START_EVENT.uid,
-            .next_step = &step_1,
-    };
-    step_0.transition = trans_0_1;
-    struct fsm_context context_0_1 = {
-            .event = START_EVENT,
-            .fnct_args = step_1.args,
-    };
-    step_0.transition.next_step->fnct(&context_0_1);
-
-}
-
-void old2_test_new_fsm(){
-    struct fsm_step step_0 = create_step(&callback, NULL);
-    struct fsm_step step_1 = create_step(&callback, NULL);
-    connect_step(&step_0, &step_1, START_EVENT.uid);
-    struct fsm_context context_0_1 = {
-            .event = START_EVENT,
-            .fnct_args = step_1.args,
-    };
-    step_0.transition.next_step->fnct(&context_0_1);
-}
+//
+//void old_test_new_fsm(){
+//    struct fsm_step step_0 = {
+//            .fnct = &callback,
+//            .args = NULL,
+//            .transition = TRANS_ENDPOINT,
+//    }, step_1 = {
+//            .fnct = &callback,
+//            .args = NULL,
+//            .transition = TRANS_ENDPOINT,
+//    };
+//    struct fsm_transition trans_0_1 = {
+//            .event_uid = START_EVENT.uid,
+//            .next_step = &step_1,
+//    };
+//    step_0.transition = trans_0_1;
+//    struct fsm_context context_0_1 = {
+//            .event = START_EVENT,
+//            .fnct_args = step_1.args,
+//    };
+//    step_0.transition.next_step->fnct(&context_0_1);
+//
+//}
+//
+//void old2_test_new_fsm(){
+//    struct fsm_step step_0 = create_step(&callback, NULL);
+//    struct fsm_step step_1 = create_step(&callback, NULL);
+//    connect_step(&step_0, &step_1, START_EVENT.uid);
+//    struct fsm_context context_0_1 = {
+//            .event = START_EVENT,
+//            .fnct_args = step_1.args,
+//    };
+//    step_0-transition.next_step->fnct(&context_0_1);
+//}
 
 void test_new_fsm(){
     struct fsm_step step_0 = create_step(&callback, NULL);
     struct fsm_step step_1 = create_step(&callback, NULL);
     connect_step(&step_0, &step_1, START_EVENT.uid);
 
-    struct fsm_pointer *fsm = create_pointer(step_0);
+    struct fsm_pointer *fsm = create_pointer(&step_0);
 
     start_pointer(fsm);
     pthread_join(fsm->thread, NULL);
@@ -127,11 +127,12 @@ void test_queue_event(){
 
 void test_fsm_loop(){
     for (int i = 0; i<10000; i++) {
-        struct fsm_step step_0 = create_step(&callback, NULL);
-        struct fsm_step step_1 = create_step(&callback, NULL);
+        int arg_step_1 = 11, arg_step_0 = 10;
+        struct fsm_step step_0 = create_step(&callback, (void *)&arg_step_0);
+        struct fsm_step step_1 = create_step(&callback, (void *)&arg_step_1);
         connect_step(&step_0, &step_1, START_EVENT.uid);
 
-        struct fsm_pointer *fsm = create_pointer(step_0);
+        struct fsm_pointer *fsm = create_pointer(&step_0);
 
         start_pointer(fsm);
         //sleep(2);
@@ -148,8 +149,47 @@ void test_fsm_loop(){
 }
 
 
+void test_fsm_trans(){
+    int arg_step_1 = 11, arg_step_0 = 10, arg_step_2=12;
+    struct fsm_step step_0 = create_step(&callback, (void *)&arg_step_0);
+    struct fsm_step step_1 = create_step(&callback, (void *)&arg_step_1);
+    struct fsm_step step_2 = create_step(&callback, (void *)&arg_step_2);
+
+    struct fsm_event go_to_1 = {
+            .uid = 101,
+            .args = NULL,
+    };
+    struct fsm_event go_to_2 = {
+            .uid = 102,
+            .args = NULL,
+    };
+
+    connect_step(&step_0, &step_1, go_to_1.uid);
+    connect_step(&step_0, &step_2, go_to_2.uid);
+
+    struct fsm_pointer *fsm = create_pointer(&step_0);
+
+    start_pointer(fsm);
+    if(rand() % 2 == 1){
+        debug("GO TO 1");
+        signal_fsm_pointer_of_event(fsm, &go_to_1);
+    }else{
+        debug("GO TO 2");
+        signal_fsm_pointer_of_event(fsm, &go_to_2);
+    }
+
+    signal_fsm_pointer_of_event(fsm, &_END_POINTER);
+
+    pthread_join(fsm->thread, NULL);
+    destroy_pointer(fsm);
+
+}
+
+
 
 int main(){
+
+    srand ( time(NULL) );
 
     //test_fsm();
 
@@ -157,7 +197,11 @@ int main(){
 
     //test_queue_event();
 
-    test_fsm_loop();
+    // test_fsm_loop();
+
+    test_fsm_trans();
+
+
 
     sleep(1);
     int i = 0;

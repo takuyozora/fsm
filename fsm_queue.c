@@ -66,3 +66,14 @@ unsigned short cleanup_fsm_queue(struct fsm_queue *queue) {
     }
     return 0;
 }
+
+struct fsm_queue *create_fsm_queue_pointer() {
+    struct fsm_queue * queue = malloc(sizeof(struct fsm_queue));
+    *queue = create_fsm_queue();
+    return queue;
+}
+
+unsigned short destory_fsm_queue_pointer(struct fsm_queue *queue) {
+    cleanup_fsm_queue(queue);
+    free(queue);
+}
