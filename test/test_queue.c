@@ -19,7 +19,7 @@
 #include "debug.h"
 #include "pthread.h"
 
-void test_queue_push_pop_order(){
+void test_queue_push_pop_order(void **state){
     struct fsm_queue queue = create_fsm_queue();
     int valueRand1 = rand();
     int valueRand2 = rand();
@@ -61,13 +61,12 @@ void test_queue_push_pop_order(){
 void * _test_queue_signal_producer(void * _queue){
     struct fsm_queue *queue = _queue;
     int value = 42;
-    usleep(500);
     push_back_fsm_queue(queue, (void *)&value, sizeof(int));
     pthread_cond_signal(&queue->cond);
     return NULL;
 }
 
-void test_queue_signal(){
+void test_queue_signal(void **state){
     struct fsm_queue queue = create_fsm_queue();
     int wait = 0;
     pthread_t thread;
@@ -94,10 +93,10 @@ void test_queue_signal(){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const UnitTest tests[] = {
-            unit_test(test_queue_push_pop_order),
-            unit_test(test_queue_signal),
+    const struct CMUnitTest tests[] = {
+            cmocka_unit_test(test_queue_push_pop_order),
+            cmocka_unit_test(test_queue_signal)
     };
 
-    return run_tests(tests);
+    return cmocka_run_group_tests(tests, NULL, NULL);
 }

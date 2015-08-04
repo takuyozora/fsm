@@ -24,12 +24,11 @@ void * callback_set_int_to_42(const struct fsm_context *context){
     return NULL;
 }
 
-void test_fsm_one(){
+void test_fsm_one(void **state){
     struct fsm_pointer *fsm = create_pointer();
     int value = 5;
     struct fsm_step *step0 = create_step(&callback_set_int_to_42, (void *)&value);
     start_pointer(fsm, step0);
-    usleep(1000);
     join_pointer(fsm);
     destroy_pointer(fsm);
     destroy_all_steps();
@@ -40,10 +39,10 @@ void test_fsm_one(){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const UnitTest tests[] = {
-            unit_test(test_fsm_one),
+    const struct CMUnitTest tests[] = {
+            cmocka_unit_test(test_fsm_one),
     };
 
-    int rc = run_tests(tests);
+    int rc = cmocka_run_group_tests(tests, NULL, NULL);
     return rc;
 }
