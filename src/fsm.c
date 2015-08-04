@@ -158,6 +158,7 @@ unsigned short destroy_pointer(struct fsm_pointer *pointer) {
     join_pointer(pointer);
     free(pointer);
     pointer = NULL;
+    return 0;
 }
 
 struct fsm_event generate_event(short event_uid, void *args) {

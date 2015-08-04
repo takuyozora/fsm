@@ -76,4 +76,5 @@ struct fsm_queue *create_fsm_queue_pointer() {
 unsigned short destory_fsm_queue_pointer(struct fsm_queue *queue) {
     cleanup_fsm_queue(queue);
     free(queue);
+    return 0;
 }

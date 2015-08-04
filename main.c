@@ -150,7 +150,7 @@ void test_fsm_trans(){
 
 int main(){
 
-    srand ( time(NULL) );
+    srand ((unsigned int) time(NULL));
 
     //test_fsm();
 
