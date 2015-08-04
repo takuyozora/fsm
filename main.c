@@ -10,6 +10,7 @@
 #include "fsm.h"
 #include "fsm_event_queue.h"
 #include "unistd.h"
+#include "debug.h"
 
 
 void test_fsm(){
@@ -124,6 +125,28 @@ void test_queue_event(){
 
 }
 
+void test_fsm_loop(){
+    for (int i = 0; i<10000; i++) {
+        struct fsm_step step_0 = create_step(&callback, NULL);
+        struct fsm_step step_1 = create_step(&callback, NULL);
+        connect_step(&step_0, &step_1, START_EVENT.uid);
+
+        struct fsm_pointer *fsm = create_pointer(step_0);
+
+        start_pointer(fsm);
+        //sleep(2);
+        //log_info("First event");
+        signal_fsm_pointer_of_event(fsm, &START_EVENT);
+        //sleep(5);
+        //log_info("Second event");
+        signal_fsm_pointer_of_event(fsm, &_END_POINTER);
+
+        pthread_join(fsm->thread, NULL);
+        destroy_pointer(fsm);
+    }
+
+}
+
 
 
 int main(){
@@ -132,7 +155,9 @@ int main(){
 
     //test_new_fsm();
 
-    test_queue_event();
+    //test_queue_event();
+
+    test_fsm_loop();
 
     sleep(1);
     int i = 0;

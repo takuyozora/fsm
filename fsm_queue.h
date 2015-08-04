@@ -23,5 +23,6 @@ struct fsm_queue {
 struct fsm_queue create_fsm_queue ();
 void * push_back_fsm_queue(struct fsm_queue *queue, const void *_value, const unsigned short size);
 void * pop_front_fsm_queue (struct fsm_queue *queue);
+unsigned short cleanup_fsm_queue(struct fsm_queue *queue);
 
 #endif //FSM_1_QUEUE_H

@@ -4,7 +4,9 @@
 
 #include <stdlib.h>
 #include "fsm.h"
+#include "fsm_event_queue.h"
 #include "stdio.h"
+#include "debug.h"
 
 
 struct fsm_trans TRANS_ENDPOINT = {0, NULL};
@@ -15,8 +17,9 @@ struct fsm_event _NONE_EVENT = {-2, NULL};
 
 /*! Just a example callback function
  */
-void callback(const struct fsm_context *context) {
-    printf("Callback : event uid : %d \n", context->event.uid);
+void * callback(const struct fsm_context *context) {
+    //log_info("Callback : event uid : %d \n", context->event.uid);
+    return NULL;
 }
 
 /*! Simplify step creation.
@@ -60,7 +63,7 @@ struct fsm_pointer * create_pointer(struct fsm_step first_step)
     pointer->thread = 0;
     pthread_mutex_init(&pointer->mutex_event, NULL);
     pthread_cond_init(&pointer->cond_event, NULL);
-    pointer->input_event = START_EVENT;
+    pointer->input_event = create_fsm_queue();
     pointer->current_step = first_step;
     pointer->started = 0;
     return pointer;
@@ -73,7 +76,7 @@ struct fsm_pointer * create_pointer(struct fsm_step first_step)
  */
 void start_pointer(struct fsm_pointer *pointer) {
     if ( pointer->started != 0 ) {
-        printf("CRITICAL : A pointer must be started only once");
+        log_err("CRITICAL : A pointer must be started only once");
         return;
     }
     pthread_create(&(pointer->thread), NULL, &pointer_loop, (void *)pointer);
@@ -91,19 +94,54 @@ void start_pointer(struct fsm_pointer *pointer) {
  */
 void *pointer_loop(void * _pointer) {
     struct fsm_pointer * pointer = _pointer;
-    start_step(pointer->current_step, START_EVENT);
+    struct fsm_step * ret_step;
+    struct fsm_event * new_event = 0;
+    ret_step = start_step(pointer->current_step, START_EVENT);
+    while (1){
+        if(ret_step != NULL){
+            ret_step = start_step(*ret_step, _NONE_EVENT);
+            continue;
+        }
+        new_event = get_event_or_wait(&pointer->input_event);
+        if (new_event != NULL){
+            //debug("Get event uid : %d", new_event->uid);
+            if (new_event->uid == _END_POINTER.uid){
+                free(new_event);
+                break;
+            }
+            if (new_event->uid == pointer->current_step.transition.event_uid){
+                ret_step = start_step(*pointer->current_step.transition.next_step, *new_event);
+                free(new_event);
+                continue;
+            }
+        }
+        free(new_event);
+        // Condition
+    }
     return NULL;
 }
+
+
 
 /*! Start a step function with the appropriate context
  *
  * Create the appropriate context and start the step function with it
  *
  */
-void start_step(struct fsm_step step, struct fsm_event event) {
+struct fsm_step * start_step(struct fsm_step step, struct fsm_event event) {
     struct fsm_context init_context = {
             .event = event,
             .fnct_args = step.args,
     };
-    step.fnct(&init_context);
+    //debug("Step by event %u", event.uid);
+    return step.fnct(&init_context);
+}
+
+struct fsm_event *signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
+    return push_back_fsm_event_queue(&pointer->input_event, event);
+}
+
+unsigned short destroy_pointer(struct fsm_pointer *pointer) {
+    cleanup_fsm_queue(&pointer->input_event);
+    free(pointer);
 }
