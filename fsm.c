@@ -28,7 +28,7 @@ void * callback(const struct fsm_context *context) {
  *  This function initialize transition to TRANS_ENDPOINT, a null transition
  *
  */
-struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void * args) {
+struct fsm_step create_step(void * (*fnct)(const struct fsm_context *), void *args) {
     struct fsm_step result = {
             .fnct = fnct,
             .args = args,

@@ -43,7 +43,7 @@ struct fsm_pointer{
 struct fsm_pointer * create_pointer(struct fsm_step first_step);
 void start_pointer(struct fsm_pointer *_pointer);
 void * pointer_loop(void *pointer);
-struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void * args);
+struct fsm_step create_step(void * (*fnct)(const struct fsm_context *), void *args);
 void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid);
 struct fsm_step * start_step(struct fsm_step step, struct fsm_event event);
 struct fsm_event * signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event * event);
