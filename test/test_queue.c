@@ -50,6 +50,7 @@ void test_queue_push_pop_order(void **state){
     assert_int_not_equal(*pValuePop1, *pValuePop3);
     assert_int_not_equal(*pValuePop2, *pValuePop3);
 
+    // Must free all data coming up from a queue
     free(pValue1);
     free(pValue2);
     free(pValue3);
