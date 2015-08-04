@@ -7,7 +7,8 @@
 #include "pthread.h"
 //#include <stdio.h>
 
-#include "new_fsm.h"
+#include "fsm.h"
+#include "fsm_event_queue.h"
 #include "unistd.h"
 
 
@@ -101,13 +102,37 @@ void test_new_fsm(){
 
 }
 
+void test_queue_event(){
+    struct fsm_queue queue = create_fsm_queue();
+    printf("Event start addr %u, uid : %d  \n", &START_EVENT, START_EVENT.uid);
+    printf("Event _END_POINTER addr %u, uid : %d \n", &_END_POINTER, _END_POINTER.uid);
+    printf("Event _NONE_EVENT addr %u, uid : %d \n", &_NONE_EVENT, _NONE_EVENT.uid);
+
+    struct fsm_event * pSTART = push_back_fsm_event_queue(&queue, &START_EVENT);
+    struct fsm_event * pEND = push_back_fsm_event_queue(&queue, &_END_POINTER);
+    struct fsm_event * pNONE = push_back_fsm_event_queue(&queue, &_NONE_EVENT);
+    struct fsm_event *event;
+    event = pop_front_fsm_event_queue(&queue);
+    printf("Event from queue addr %u/%u, uid : %d \n", event, pSTART, event->uid);
+    free(event);
+    event = pop_front_fsm_event_queue(&queue);
+    printf("Event from queue addr %u/%u, uid : %d \n", event, pEND, event->uid);
+    free(event);
+    event = pop_front_fsm_event_queue(&queue);
+    printf("Event from queue addr %u/%u, uid : %d \n", event, pNONE, event->uid);
+    free(event);
+
+}
+
 
 
 int main(){
 
     //test_fsm();
 
-    test_new_fsm();
+    //test_new_fsm();
+
+    test_queue_event();
 
     sleep(1);
     int i = 0;

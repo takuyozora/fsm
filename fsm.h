@@ -2,74 +2,58 @@
 // Created by olivier on 03/08/15.
 //
 
+#ifndef FSM_1_NEW_FSM_H
+#define FSM_1_NEW_FSM_H
 
+#include "pthread.h"
 
-#ifndef FSM_1_FSM_H
-#define FSM_1_FSM_H
-
-//#include "pthread.h"
-
-struct test_in {
-    int a;
-    int b;
-};
-
-struct event{
-    unsigned int x;
-    char y;
-};
-
-struct mxd_event{
-    int x;
-    double y;
-    char z;
-};
-
-struct context{
-    const struct event *event;
-    const char *args;
-};
-
-struct step {
-    void (*fnct)(const struct context *);
-    const char args;
-    const struct transition *transition;
-};
-
-struct transition
+struct fsm_event
 {
-    const unsigned int event_uid;
-    struct step *next_step;
+    short uid;
+    void * args;
 };
-/*
-struct pointer
-{
-    struct event *input;
+
+struct fsm_context{
+    struct fsm_event event;
+    void * fnct_args;
+};
+
+struct fsm_trans{
+    short event_uid;
+    const struct fsm_step *next_step;
+};
+
+struct fsm_step{
+    void (*fnct)(const struct fsm_context *);
+    void * args;
+    struct fsm_trans transition;
+};
+
+struct fsm_pointer{
     pthread_t thread;
-    pthread_cond_t cond_new_input;
-    pthread_mutex_t mutex;
+    pthread_mutex_t mutex_event;
+    pthread_cond_t cond_event;
+    struct fsm_event input_event;
+    struct fsm_step current_step;
+    unsigned short started;
 };
 
-struct init_pointer{
-    struct step *first_step;
-    struct pointer *pointer;
-};*/
 
-//int start_fsm(struct pointer *pointer, struct step step);
-
-void _callback(const struct event *event, const char *args);
-
-void callback(const struct context *context);
-
-//void pointer_event_signal(struct event *event, struct pointer *pointer);
-
-//void * pointer_loop(void *init_data);
+struct fsm_pointer * create_pointer(struct fsm_step first_step);
+void start_pointer(struct fsm_pointer *_pointer);
+void * pointer_loop(void *pointer);
+struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void * args);
+void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid);
+void start_step(struct fsm_step step, struct fsm_event event);
 
 
-extern struct event START_EVENT;
-extern struct event _END_POINTER;
+void callback(const struct fsm_context *context);
 
 
+extern struct fsm_event START_EVENT;
+extern struct fsm_event _END_POINTER;
+extern struct fsm_event _NONE_EVENT;
+extern struct fsm_trans TRANS_ENDPOINT;
 
 
-#endif //FSM_1_FSM_H
+#endif //FSM_1_NEW_FSM_H

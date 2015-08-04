@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "queue.h"
+#include "fsm_queue.h"
 
 
 struct fsm_queue create_fsm_queue() {
@@ -19,17 +19,22 @@ struct fsm_queue create_fsm_queue() {
     return queue;
 }
 
-void push_back_fsm_queue(struct fsm_queue *queue, const void *_value, const unsigned short size) {
-    struct fsm_queue_elem elem;
-    elem.value = malloc(sizeof(size));
-    memcpy(elem.value, _value, size);
-    elem.next = NULL;
+void * push_back_fsm_queue(struct fsm_queue *queue, const void *_value, const unsigned short size) {
+    struct fsm_queue_elem * elem = malloc(sizeof(struct fsm_queue_elem));
+    elem->value = malloc(sizeof(size));
+    memcpy(elem->value, _value, size);
+    elem->next = NULL;
     pthread_mutex_lock(&queue->mutex);
-    elem.prev = queue->last;
-    elem.prev->next = &elem;
-    queue->last = &elem;
+    elem->prev = queue->last;
+    if (elem->prev != NULL) {
+        elem->prev->next = elem;
+    }else{
+        queue->first = elem;
+    }
+    queue->last = elem;
     pthread_mutex_unlock(&queue->mutex);
     pthread_cond_signal(&queue->cond);
+    return elem->value;
 }
 
 void *pop_front_fsm_queue(struct fsm_queue *queue) {
@@ -38,9 +43,13 @@ void *pop_front_fsm_queue(struct fsm_queue *queue) {
     }
     pthread_mutex_lock(&queue->mutex);
     void * value = queue->first->value;
+    struct fsm_queue_elem *fsm_elem_to_free = queue->first;
     queue->first = queue->first->next;
+    free(fsm_elem_to_free);
     if(queue->first != NULL) {
         queue->first->prev = NULL;
+    }else{
+        queue->last = NULL;
     }
     pthread_mutex_unlock(&queue->mutex);
     return value;
