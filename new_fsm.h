@@ -39,7 +39,7 @@ struct fsm_pointer{
 };
 
 
-struct fsm_pointer create_pointer(struct fsm_step first_step);
+struct fsm_pointer * create_pointer(struct fsm_step first_step);
 void start_pointer(struct fsm_pointer *_pointer);
 void * pointer_loop(void *pointer);
 struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void * args);

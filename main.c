@@ -1,8 +1,9 @@
 //#include "fsm.h"
 //#include<unistd.h>
-//#include <stdio.h>
+#include <stdio.h>
 //#include <stdlib.h>
 //#include <pthread.h>
+#include <stdlib.h>
 #include "pthread.h"
 //#include <stdio.h>
 
@@ -92,11 +93,12 @@ void test_new_fsm(){
     struct fsm_step step_1 = create_step(&callback, NULL);
     connect_step(&step_0, &step_1, START_EVENT.uid);
 
-    struct fsm_pointer fsm = create_pointer(step_0);
+    struct fsm_pointer *fsm = create_pointer(step_0);
 
+    start_pointer(fsm);
+    pthread_join(fsm->thread, NULL);
+    free(fsm);
 
-    start_pointer(&fsm);
-    pthread_join(fsm.thread, NULL);
 }
 
 

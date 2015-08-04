@@ -25,9 +25,9 @@ void callback(const struct fsm_context *context) {
  *  This function initialize transition to TRANS_ENDPOINT, a null transition
  *
  */
-struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void *args) {
+struct fsm_step create_step(void (*fnct)(const struct fsm_context *), void * args) {
     struct fsm_step result = {
-            .fnct = (*fnct),
+            .fnct = fnct,
             .args = args,
             .transition = TRANS_ENDPOINT,
     };
@@ -54,16 +54,15 @@ void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
  * thread vars
  *
  */
-struct fsm_pointer create_pointer(struct fsm_step first_step)
+struct fsm_pointer * create_pointer(struct fsm_step first_step)
 {
-    struct fsm_pointer pointer = {
-            .thread = NULL,
-            .mutex_event = PTHREAD_MUTEX_INITIALIZER,
-            .cond_event = PTHREAD_COND_INITIALIZER,
-            .input_event = _NONE_EVENT,
-            .current_step = first_step,
-            .started = 0
-    };
+    struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
+    pointer->thread = 0;
+    pthread_mutex_init(&pointer->mutex_event, NULL);
+    pthread_cond_init(&pointer->cond_event, NULL);
+    pointer->input_event = START_EVENT;
+    pointer->current_step = first_step;
+    pointer->started = 0;
     return pointer;
 }
 
@@ -73,22 +72,13 @@ struct fsm_pointer create_pointer(struct fsm_step first_step)
  *
  */
 void start_pointer(struct fsm_pointer *pointer) {
-    if ( pointer->started != 0 ){
+    if ( pointer->started != 0 ) {
         printf("CRITICAL : A pointer must be started only once");
         return;
     }
-    pthread_create(&pointer->thread, NULL, &pointer_loop, (void *) pointer);
+    pthread_create(&(pointer->thread), NULL, &pointer_loop, (void *)pointer);
     pointer->started = 1;
 }
-
-/*struct fsm_pointer *_pt;
-    _pt = malloc(sizeof(struct fsm_pointer));
-    (*_pt).thread = pointer->thread;
-    (*_pt).current_step = pointer->current_step;
-    (*_pt).cond_event = pointer->cond_event;
-    (*_pt).mutex_event = pointer->mutex_event;
-    (*_pt).input_event = pointer->input_event;
-    (*_pt).started = pointer->started;*/
 
 /*! Main loop for the pointer thread, run step and wait for event
  *
@@ -99,8 +89,8 @@ void start_pointer(struct fsm_pointer *pointer) {
  *
  * NOT FULLY IMPLEMENTED
  */
-void *pointer_loop(void *_pointer) {
-    struct fsm_pointer *pointer = _pointer;
+void *pointer_loop(void * _pointer) {
+    struct fsm_pointer * pointer = _pointer;
     start_step(pointer->current_step, START_EVENT);
     return NULL;
 }
