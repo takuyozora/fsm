@@ -19,14 +19,19 @@ struct fsm_queue create_fsm_queue() {
     check(pthread_mutex_init(&queue.mutex, NULL) == 0, "ERROR DURING MUTEX INIT");
     check(pthread_cond_init(&queue.cond, NULL) == 0, "ERROR DURING CONDITION INIT");
     return queue;
-error:
+    error:
     exit(1);
 }
 
-void * push_back_fsm_queue(struct fsm_queue *queue, const void *_value, const unsigned short size) {
+void * push_back_fsm_queue_more(
+        struct fsm_queue *queue, void *_value, const unsigned short size, unsigned short copy) {
     struct fsm_queue_elem * elem = malloc(sizeof(struct fsm_queue_elem));
-    elem->value = malloc(sizeof(size));
-    memcpy(elem->value, _value, size);
+    if (copy) {
+        elem->value = malloc(size);
+        memcpy(elem->value, _value, size);
+    }else{
+        elem->value = _value;
+    }
     elem->next = NULL;
     pthread_mutex_lock(&queue->mutex);
     elem->prev = queue->last;
@@ -39,6 +44,11 @@ void * push_back_fsm_queue(struct fsm_queue *queue, const void *_value, const un
     pthread_cond_broadcast(&queue->cond);
     pthread_mutex_unlock(&queue->mutex);
     return elem->value;
+}
+
+void * push_back_fsm_queue(
+        struct fsm_queue *queue, void *_value, const unsigned short size) {
+    return push_back_fsm_queue_more(queue, _value, size, 1);
 }
 
 void *pop_front_fsm_queue(struct fsm_queue *queue) {
@@ -68,8 +78,9 @@ unsigned short cleanup_fsm_queue(struct fsm_queue *queue) {
 }
 
 struct fsm_queue *create_fsm_queue_pointer() {
+    struct fsm_queue _q = create_fsm_queue();
     struct fsm_queue * queue = malloc(sizeof(struct fsm_queue));
-    *queue = create_fsm_queue();
+    memcpy(queue, &_q, sizeof(struct fsm_queue));
     return queue;
 }
 

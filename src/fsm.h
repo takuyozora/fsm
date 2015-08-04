@@ -2,8 +2,8 @@
 // Created by olivier on 03/08/15.
 //
 
-#ifndef FSM_1_NEW_FSM_H
-#define FSM_1_NEW_FSM_H
+#ifndef FSM_NEW_FSM_H
+#define FSM_NEW_FSM_H
 
 #define _EVENT_STOP_POINTER_UID -1
 
@@ -66,4 +66,4 @@ extern struct fsm_transition TRANS_ENDPOINT;
 extern struct fsm_queue *_all_steps_created;
 
 
-#endif //FSM_1_NEW_FSM_H
+#endif //FSM_NEW_FSM_H

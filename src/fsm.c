@@ -36,6 +36,7 @@ struct fsm_step * create_step(void *(*fnct)(const struct fsm_context *), void *a
         _all_steps_created = create_fsm_queue_pointer();
     }
     struct fsm_step *step = malloc(sizeof(struct fsm_step));
+    step = push_back_fsm_queue_more(_all_steps_created, (void *)step, sizeof(*step), 0);
     step->fnct = fnct;
     step->args = args;
     step->transitions = create_fsm_queue_pointer();
@@ -172,8 +173,12 @@ struct fsm_event generate_event(short event_uid, void *args) {
 unsigned short destroy_all_steps() {
     while(_all_steps_created->first != NULL){
         struct fsm_step *step = (struct fsm_step *)pop_front_fsm_queue(_all_steps_created);
+        debug("Deleting a step..");
+        free(step->transitions);
         free(step);
     }
+    destory_fsm_queue_pointer(_all_steps_created);
+    _all_steps_created = NULL;
     return 0;
 }
 

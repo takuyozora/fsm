@@ -32,6 +32,7 @@ void test_fsm_one(){
     usleep(1000);
     join_pointer(fsm);
     destroy_pointer(fsm);
+    destroy_all_steps();
     assert_int_equal(value, 42);
 }
 
@@ -43,5 +44,6 @@ int main(void)
             unit_test(test_fsm_one),
     };
 
-    return run_tests(tests);
+    int rc = run_tests(tests);
+    return rc;
 }
