@@ -10,8 +10,8 @@ struct fsm_event *pop_front_fsm_event_queue(struct fsm_queue *queue){
     return (struct fsm_event *)pop_front_fsm_queue(queue);
 }
 
-struct fsm_event * push_back_fsm_event_queue(struct fsm_queue *queue, struct fsm_event *event) {
-    return (struct fsm_event *)push_back_fsm_queue(queue, (void *)event, sizeof(*event));
+struct fsm_event * push_back_fsm_event_queue(struct fsm_queue *queue, struct fsm_event event) {
+    return (struct fsm_event *)push_back_fsm_queue(queue, (void *)&event, sizeof(event));
 }
 
 struct fsm_event *get_event_or_wait(struct fsm_queue *queue) {

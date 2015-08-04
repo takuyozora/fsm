@@ -1,0 +1,11 @@
+include_directories ("${PROJECT_SOURCE_DIR}/src")
+include_directories ("${PROJECT_SOURCE_DIR}")
+
+add_executable(test_queue test_queue.c)
+add_executable(test_fsm test_fsm.c)
+add_dependencies(test_queue fsm_queue)
+add_dependencies(test_fsm fsm_queue fsm)
+add_test(test_queue test_queue)
+add_test(test_fsm test_fsm)
+target_link_libraries(test_queue fsm_queue cmocka)
+target_link_libraries(test_fsm fsm_queue fsm cmocka)
