@@ -19,6 +19,9 @@
 #include "fsm.h"
 #include "pthread.h"
 #include "debug.h"
+#include "benchmark.h"
+
+#define MAX_INCREMENT_CALLBACK 100000
 
 void *callback_set_int_from_step_to_42(const struct fsm_context *context){
     *(int *)context->fnct_args = 42;
@@ -32,6 +35,15 @@ void *callback_assert_int_from_event_is_42(const struct fsm_context *context){
 
 void *callback_return_step_from_event(const struct fsm_context *context){
     return (struct fsm_step *)context->event->args;
+}
+
+void *callback_increment_int_from_step(const struct fsm_context *context){
+    if (*(int *)context->fnct_args < MAX_INCREMENT_CALLBACK) {
+        (*(int *) context->fnct_args)++;
+    }else{
+        cleanup_fsm_queue(context->pointer->current_step->transitions);
+    }
+    return NULL;
 }
 
 void test_fsm_start_stop(void **state){
@@ -166,6 +178,53 @@ void test_fsm_direct_transition(void **state){
     destroy_all_steps();
 }
 
+void benchmark_fsm_direct_transitions(void **state){
+    struct fsm_pointer *fsm = create_pointer();
+    int i = 0;
+    struct fsm_step *step_0 = create_step(callback_increment_int_from_step, (void *)&i);
+    struct fsm_step *step_1 = create_step(callback_increment_int_from_step, (void *)&i);
+
+    connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
+    connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
+
+    double start_time = bm_get_clock();
+    start_pointer(fsm, step_0);
+    join_pointer(fsm);
+    double diff_time = bm_get_clock() - start_time;
+
+    log_info("Benchmark for %u step transition : %f s", MAX_INCREMENT_CALLBACK, diff_time);
+    log_info("Benchmark for 1 step transition : ~%f ns", diff_time*1000000000/MAX_INCREMENT_CALLBACK);
+
+    join_pointer(fsm);
+    destroy_pointer(fsm);
+    destroy_all_steps();
+}
+
+void benchmark_fsm_ping_pong_transitions(void **state){
+    struct fsm_pointer *fsm = create_pointer();
+    int i = 0;
+    struct fsm_step *step_0 = create_step(callback_increment_int_from_step, (void *)&i);
+    struct fsm_step *step_1 = create_step(callback_increment_int_from_step, (void *)&i);
+
+    connect_step(step_0, step_1, "NEXT");
+    connect_step(step_1, step_0, "NEXT");
+
+    double start_time = bm_get_clock();
+    start_pointer(fsm, step_0);
+    for(int i=0; i <= MAX_INCREMENT_CALLBACK; i++){
+        signal_fsm_pointer_of_event(fsm, generate_event("NEXT", NULL));
+    }
+    join_pointer(fsm);
+    double diff_time = bm_get_clock() - start_time;
+
+    log_info("Benchmark for %u step transition : %f s", MAX_INCREMENT_CALLBACK, diff_time);
+    log_info("Benchmark for 1 step transition : ~%f ns", diff_time*1000000000/MAX_INCREMENT_CALLBACK);
+
+    join_pointer(fsm);
+    destroy_pointer(fsm);
+    destroy_all_steps();
+}
+
 int main(void)
 {
     srand ((unsigned int) time(NULL));
@@ -176,6 +235,8 @@ int main(void)
             cmocka_unit_test(test_fsm_passing_value_by_event),
             cmocka_unit_test(test_fsm_change_step_by_callback_return),
             cmocka_unit_test(test_fsm_direct_transition),
+            cmocka_unit_test(benchmark_fsm_direct_transitions),
+            cmocka_unit_test(benchmark_fsm_ping_pong_transitions),
     };
 
     int rc = cmocka_run_group_tests(tests, NULL, NULL);

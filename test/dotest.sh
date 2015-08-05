@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-cd build/
+cd ../build/
 cmake .. && make && ctest -V
 
 exit $?

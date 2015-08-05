@@ -150,6 +150,7 @@ struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, 
     struct fsm_context init_context = {
             .event = event,
             .fnct_args = step->args,
+            .pointer = pointer,
     };
     pthread_mutex_lock(&pointer->mutex);
     pointer->current_step = step;
@@ -191,6 +192,7 @@ void join_pointer(struct fsm_pointer *pointer) {
     pthread_mutex_lock(&pointer->mutex);
     if(pointer->running == 1) {
         signal_fsm_pointer_of_event(pointer, generate_event(_EVENT_STOP_POINTER_UID, NULL));
+        //cleanup_fsm_queue(pointer->current_step->transitions); // To avoid direct transition inhibit stop event
         pthread_mutex_unlock(&pointer->mutex);
         pthread_join(pointer->thread, NULL);
         pthread_mutex_lock(&pointer->mutex);

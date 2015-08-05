@@ -18,6 +18,7 @@ struct fsm_event
 struct fsm_context{
     struct fsm_event * event;
     void * fnct_args;
+    struct fsm_pointer *pointer;
 };
 
 struct fsm_transition {
