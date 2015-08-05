@@ -7,4 +7,4 @@ add_subdirectory(test)
 add_subdirectory(src)
 set(SOURCE_FILES main.c)
 
-add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/fsm_queue.c src/fsm_event_queue.h src/fsm_event_queue.c src/debug.h src/fsm_transition_queue.h src/fsm_transition_queue.c)#fsm.h fsm.c)
+add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/fsm_queue.c src/fsm_event_queue.h src/fsm_event_queue.c src/debug.h src/fsm_transition_queue.h src/fsm_transition_queue.c src/events.h)#fsm.h fsm.c)

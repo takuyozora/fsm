@@ -9,11 +9,11 @@
 #include "fsm_transition_queue.h"
 #include "stdio.h"
 #include "debug.h"
-
+#include "time.h"
+#include <sys/time.h>
 
 struct fsm_transition TRANS_ENDPOINT = {0, NULL};
 struct fsm_event START_EVENT = {1, NULL};
-struct fsm_event _END_POINTER = {-1, NULL};
 struct fsm_event _NONE_EVENT = {-2, NULL};
 static struct fsm_queue *_all_steps_created = NULL;
 
@@ -21,7 +21,7 @@ static struct fsm_queue *_all_steps_created = NULL;
 /*! Just a example callback function
  */
 void * callback(const struct fsm_context *context) {
-    log_info("Callback : event uid : %d, args : %d \n", context->event.uid, *(int *)context->fnct_args);
+    log_info("Callback : event uid : %s, args : %d \n", context->event->uid, *(int *)context->fnct_args);
     return NULL;
 }
 
@@ -49,11 +49,11 @@ struct fsm_step * create_step(void *(*fnct)(const struct fsm_context *), void *a
  * attach it to the \a from step
  *
  */
-void connect_step(struct fsm_step *from, struct fsm_step *to, short event_uid) {
+void connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
     struct fsm_transition transition = {
-            .event_uid = event_uid,
             .next_step = to,
     };
+    strcpy(transition.event_uid, event_uid);
     push_back_fsm_transition_queue(from->transitions, &transition);
 }
 
@@ -103,30 +103,37 @@ void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
  */
 void *pointer_loop(void * _pointer) {
     struct fsm_pointer * pointer = _pointer;
-    struct fsm_step * ret_step;
-    struct fsm_event * new_event = NULL;
+    struct fsm_step * ret_step = pointer->current_step; // Allow to start the first step without transition
+    struct fsm_event * new_event = generate_event(_EVENT_START_POINTER_UID, NULL);
     struct fsm_transition * reachable_transition = NULL;
-    ret_step = start_step(pointer, pointer->current_step, &START_EVENT);
     while (1){
         if(ret_step != NULL){
-            ret_step = start_step(pointer, ret_step, &_NONE_EVENT);
+            ret_step = start_step(pointer, ret_step, new_event);
             continue;
         }
+        if(pointer->current_step->transitions->first != NULL){ // Check if there isn't direct transition
+            if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid,
+                _EVENT_DIRECT_TRANSITION) == 0){
+                // Then we direct go to next step
+                ret_step = start_step(pointer, ((struct fsm_transition *)
+                        (pointer->current_step->transitions->first->value))->next_step, new_event);
+                continue;
+            }
+        }
+        free(new_event);
         new_event = get_event_or_wait(&pointer->input_event);
         if (new_event != NULL){
             //debug("Get event uid : %d", new_event->uid);
-            if (new_event->uid == _EVENT_STOP_POINTER_UID){
+            if (strcmp(new_event->uid, _EVENT_STOP_POINTER_UID) == 0){
                 free(new_event);
                 break;
             }
             reachable_transition = get_reachable_condition(pointer->current_step->transitions, new_event);
             if (reachable_transition != NULL){
                 ret_step = start_step(pointer, reachable_transition->next_step, new_event);
-                free(new_event);
                 continue;
             }
         }
-        free(new_event);
         // Condition
     }
     return NULL;
@@ -141,17 +148,17 @@ void *pointer_loop(void * _pointer) {
  */
 struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
     struct fsm_context init_context = {
-            .event = *event,
+            .event = event,
             .fnct_args = step->args,
     };
     pthread_mutex_lock(&pointer->mutex);
     pointer->current_step = step;
+    pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
-    //debug("Step by event %u", event.uid);
     return step->fnct(&init_context);
 }
 
-struct fsm_event *signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event event) {
+struct fsm_event *signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
     return push_back_fsm_event_queue(&pointer->input_event, event);
 }
 
@@ -162,19 +169,17 @@ unsigned short destroy_pointer(struct fsm_pointer *pointer) {
     return 0;
 }
 
-struct fsm_event generate_event(short event_uid, void *args) {
-    struct fsm_event event = {
-            .uid = event_uid,
-            .args = args
-    };
+struct fsm_event * generate_event(char *event_uid, void *args) {
+    struct fsm_event *event = malloc(sizeof(struct fsm_event));
+    strcpy(event->uid, event_uid);
+    event->args = args;
     return event;
 }
 
 unsigned short destroy_all_steps() {
     while(_all_steps_created->first != NULL){
         struct fsm_step *step = (struct fsm_step *)pop_front_fsm_queue(_all_steps_created);
-        debug("Deleting a step..");
-        free(step->transitions);
+        destory_fsm_queue_pointer(step->transitions);
         free(step);
     }
     destory_fsm_queue_pointer(_all_steps_created);
@@ -193,4 +198,40 @@ void join_pointer(struct fsm_pointer *pointer) {
     }
     cleanup_fsm_queue(&pointer->input_event);
     pthread_mutex_unlock(&pointer->mutex);
+}
+
+void *fsm_null_callback(const struct fsm_context *context) {
+    return NULL;
+}
+
+int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout) {
+    struct timeval tv;
+    struct timespec ts;
+    int rc = 0;
+
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = time(NULL) + mstimeout / 1000;
+    ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (mstimeout % 1000);
+    ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
+    ts.tv_nsec %= (1000 * 1000 * 1000);
+
+    pthread_mutex_lock(&pointer->mutex);
+    while (pointer->current_step != step){
+        rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->mutex, &ts);
+        if (rc == ETIMEDOUT){
+            break;
+        }
+    }
+    pthread_mutex_unlock(&pointer->mutex);
+    return rc;
+}
+
+int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step) {
+    int rc = 0;
+    pthread_mutex_lock(&pointer->mutex);
+    while (pointer->current_step != step){
+        rc = pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
+    }
+    pthread_mutex_unlock(&pointer->mutex);
+    return rc;
 }

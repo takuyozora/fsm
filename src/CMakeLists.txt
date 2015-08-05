@@ -1,2 +1,2 @@
-add_library(fsm_queue fsm_queue.c fsm_queue.h fsm_event_queue.c fsm_event_queue.h fsm_transition_queue.c fsm_transition_queue.h)
-add_library(fsm fsm.h fsm.c fsm_queue.c fsm_queue.h fsm_event_queue.c fsm_event_queue.h fsm_transition_queue.c fsm_transition_queue.h)
+add_library(fsm_queue fsm_queue.c fsm_queue.h fsm_event_queue.c fsm_event_queue.h fsm_transition_queue.c fsm_transition_queue.h events.h)
+add_library(fsm fsm.h fsm.c fsm_queue.c fsm_queue.h fsm_event_queue.c fsm_event_queue.h fsm_transition_queue.c fsm_transition_queue.h events.h)

@@ -51,7 +51,7 @@
 void test_new_fsm(){
     struct fsm_step *step_0 = create_step(&callback, NULL);
     struct fsm_step *step_1 = create_step(&callback, NULL);
-    connect_step(step_0, step_1, START_EVENT.uid);
+    //connect_step(step_0, step_1, START_EVENT.uid);
 
     struct fsm_pointer *fsm = create_pointer();
 
@@ -62,44 +62,44 @@ void test_new_fsm(){
 
 }
 
-void test_queue_event(){
-    struct fsm_queue queue = create_fsm_queue();
-    printf("Event start addr %u, uid : %d  \n", &START_EVENT, START_EVENT.uid);
-    printf("Event _END_POINTER addr %u, uid : %d \n", &_END_POINTER, _END_POINTER.uid);
-    printf("Event _NONE_EVENT addr %u, uid : %d \n", &_NONE_EVENT, _NONE_EVENT.uid);
-
-    struct fsm_event * pSTART = push_back_fsm_event_queue(&queue, START_EVENT);
-    struct fsm_event * pEND = push_back_fsm_event_queue(&queue, _END_POINTER);
-    struct fsm_event * pNONE = push_back_fsm_event_queue(&queue, _NONE_EVENT);
-    struct fsm_event *event;
-    event = pop_front_fsm_event_queue(&queue);
-    printf("Event from queue addr %u/%u, uid : %d \n", event, pSTART, event->uid);
-    free(event);
-    event = pop_front_fsm_event_queue(&queue);
-    printf("Event from queue addr %u/%u, uid : %d \n", event, pEND, event->uid);
-    free(event);
-    event = pop_front_fsm_event_queue(&queue);
-    printf("Event from queue addr %u/%u, uid : %d \n", event, pNONE, event->uid);
-    free(event);
-
-}
+//void test_queue_event(){
+//    struct fsm_queue queue = create_fsm_queue();
+//    printf("Event start addr %u, uid : %d  \n", &START_EVENT, START_EVENT.uid);
+//    printf("Event _EVENT_END_POINTER addr %u, uid : %d \n", &_EVENT_END_POINTER, _EVENT_END_POINTER.uid);
+//    printf("Event _NONE_EVENT addr %u, uid : %d \n", &_NONE_EVENT, _NONE_EVENT.uid);
+//
+//    struct fsm_event * pSTART = push_back_fsm_event_queue(&queue, START_EVENT);
+//    struct fsm_event * pEND = push_back_fsm_event_queue(&queue, _EVENT_END_POINTER);
+//    struct fsm_event * pNONE = push_back_fsm_event_queue(&queue, _NONE_EVENT);
+//    struct fsm_event *event;
+//    event = pop_front_fsm_event_queue(&queue);
+//    printf("Event from queue addr %u/%u, uid : %d \n", event, pSTART, event->uid);
+//    free(event);
+//    event = pop_front_fsm_event_queue(&queue);
+//    printf("Event from queue addr %u/%u, uid : %d \n", event, pEND, event->uid);
+//    free(event);
+//    event = pop_front_fsm_event_queue(&queue);
+//    printf("Event from queue addr %u/%u, uid : %d \n", event, pNONE, event->uid);
+//    free(event);
+//
+//}
 
 void test_fsm_loop(){
     for (int i = 0; i<10000; i++) {
         int arg_step_1 = 11, arg_step_0 = 10;
         struct fsm_step *step_0 = create_step(&callback, (void *)&arg_step_0);
         struct fsm_step *step_1 = create_step(&callback, (void *)&arg_step_1);
-        connect_step(step_0, step_1, START_EVENT.uid);
+        //connect_step(step_0, step_1, START_EVENT.uid);
 
         struct fsm_pointer *fsm = create_pointer();
 
         start_pointer(fsm, step_0);
         //sleep(2);
         //log_info("First event");
-        signal_fsm_pointer_of_event(fsm, START_EVENT);
+        //signal_fsm_pointer_of_event(fsm, START_EVENT);
         //sleep(5);
         //log_info("Second event");
-        signal_fsm_pointer_of_event(fsm, _END_POINTER);
+        //signal_fsm_pointer_of_event(fsm, _EVENT_END_POINTER);
 
         pthread_join(fsm->thread, NULL);
         destroy_pointer(fsm);
@@ -139,7 +139,7 @@ void test_fsm_trans(){
         signal_fsm_pointer_of_event(fsm, generate_event(go_to_2_uid, NULL));
     }
 
-    signal_fsm_pointer_of_event(fsm, _END_POINTER);
+    signal_fsm_pointer_of_event(fsm, generate_event(_EVENT_STOP_POINTER_UID, NULL));
 
     pthread_join(fsm->thread, NULL);
     destroy_pointer(fsm);

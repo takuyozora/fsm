@@ -1,0 +1,13 @@
+//
+// Created by olivier on 05/08/15.
+//
+
+#ifndef FSM_EVENTS_H
+#define FSM_EVENTS_H
+
+#define MAX_EVENT_UID_LEN 65
+#define _EVENT_STOP_POINTER_UID "__STOP_POINTER"
+#define _EVENT_DIRECT_TRANSITION "__DIRECT"
+#define _EVENT_START_POINTER_UID "__START_POINTER"
+
+#endif //FSM_EVENTS_H
