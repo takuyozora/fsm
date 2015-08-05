@@ -8,16 +8,11 @@
 #include <cmocka.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <unistd.h>
-#include <sys/types.h>
-
+#include "pthread.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 
 #include "fsm.h"
-#include "pthread.h"
 #include "debug.h"
 #include "benchmark.h"
 

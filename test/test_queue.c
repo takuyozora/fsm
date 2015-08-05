@@ -8,16 +8,11 @@
 #include <cmocka.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
-
+#include "pthread.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 
 #include "fsm_queue.h"
 #include "debug.h"
-#include "pthread.h"
 
 void test_queue_push_pop_order(void **state){
     struct fsm_queue queue = create_fsm_queue();
