@@ -108,43 +108,6 @@ void test_fsm_loop(){
 }
 
 
-void test_fsm_trans(){
-    int arg_step_1 = 11, arg_step_0 = 10, arg_step_2=12;
-    struct fsm_step *step_0 = create_step(&callback, (void *)&arg_step_0);
-    struct fsm_step *step_1 = create_step(&callback, (void *)&arg_step_1);
-    struct fsm_step *step_2 = create_step(&callback, (void *)&arg_step_2);
-
-    /*struct fsm_event go_to_1 = {
-            .uid = 101,
-            .args = NULL,
-    };
-    struct fsm_event go_to_2 = {
-            .uid = 102,
-            .args = NULL,
-    };*/
-
-    short go_to_1_uid = 101, go_to_2_uid = 102;
-
-    connect_step(step_0, step_1, go_to_1_uid);
-    connect_step(step_0, step_2, go_to_2_uid);
-
-    struct fsm_pointer *fsm = create_pointer();
-
-    start_pointer(fsm, step_0);
-    if(rand() % 2 == 1){
-        debug("GO TO 1");
-        signal_fsm_pointer_of_event(fsm, generate_event(go_to_1_uid, NULL));
-    }else{
-        debug("GO TO 2");
-        signal_fsm_pointer_of_event(fsm, generate_event(go_to_2_uid, NULL));
-    }
-
-    signal_fsm_pointer_of_event(fsm, generate_event(_EVENT_STOP_POINTER_UID, NULL));
-
-    pthread_join(fsm->thread, NULL);
-    destroy_pointer(fsm);
-
-}
 
 
 
@@ -152,15 +115,6 @@ int main(){
 
     srand ((unsigned int) time(NULL));
 
-    //test_fsm();
-
-    //test_new_fsm();
-
-    //test_queue_event();
-
-    // test_fsm_loop();
-
-    test_fsm_trans();
 
 
 
