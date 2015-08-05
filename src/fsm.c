@@ -4,26 +4,15 @@
 
 #include <stdlib.h>
 #include "fsm.h"
-#include "fsm_queue.h"
 #include "fsm_event_queue.h"
 #include "fsm_transition_queue.h"
 #include "stdio.h"
 #include "debug.h"
-#include "time.h"
 #include <sys/time.h>
 
-struct fsm_transition TRANS_ENDPOINT = {0, NULL};
-struct fsm_event START_EVENT = {1, NULL};
-struct fsm_event _NONE_EVENT = {-2, NULL};
+// Global var to keep a trace of all steps created in order to free them at the end
 static struct fsm_queue *_all_steps_created = NULL;
 
-
-/*! Just a example callback function
- */
-void * callback(const struct fsm_context *context) {
-    log_info("Callback : event uid : %s, args : %d \n", context->event->uid, *(int *)context->fnct_args);
-    return NULL;
-}
 
 /*! Simplify step creation.
  *
@@ -31,7 +20,7 @@ void * callback(const struct fsm_context *context) {
  *  This function initialize transition to TRANS_ENDPOINT, a null transition
  *
  */
-struct fsm_step * create_step(void *(*fnct)(const struct fsm_context *), void *args) {
+struct fsm_step * create_step(void *(*fnct)(struct fsm_context *), void *args) {
     if (_all_steps_created == NULL){
         _all_steps_created = create_fsm_queue_pointer();
     }
@@ -202,7 +191,7 @@ void join_pointer(struct fsm_pointer *pointer) {
     pthread_mutex_unlock(&pointer->mutex);
 }
 
-void *fsm_null_callback(const struct fsm_context *context) {
+void *fsm_null_callback(struct fsm_context *context) {
     return NULL;
 }
 

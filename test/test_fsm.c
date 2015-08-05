@@ -18,21 +18,21 @@
 
 #define MAX_INCREMENT_CALLBACK 100000
 
-void *callback_set_int_from_step_to_42(const struct fsm_context *context){
+void *callback_set_int_from_step_to_42(struct fsm_context *context){
     *(int *)context->fnct_args = 42;
     return NULL;
 }
 
-void *callback_assert_int_from_event_is_42(const struct fsm_context *context){
+void *callback_assert_int_from_event_is_42(struct fsm_context *context){
     assert_int_equal(*(int *)context->event->args, 42);
     return NULL;
 }
 
-void *callback_return_step_from_event(const struct fsm_context *context){
+void *callback_return_step_from_event(struct fsm_context *context){
     return (struct fsm_step *)context->event->args;
 }
 
-void *callback_increment_int_from_step(const struct fsm_context *context){
+void *callback_increment_int_from_step(struct fsm_context *context){
     if (*(int *)context->fnct_args < MAX_INCREMENT_CALLBACK) {
         (*(int *) context->fnct_args)++;
     }else{
