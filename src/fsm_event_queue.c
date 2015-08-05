@@ -15,15 +15,6 @@ struct fsm_event * push_back_fsm_event_queue(struct fsm_queue *queue, struct fsm
 }
 
 struct fsm_event *get_event_or_wait(struct fsm_queue *queue) {
-//    while (1) {
-//        pthread_mutex_lock(&queue->mutex);
-//        if (queue->first != NULL) {
-//            pthread_mutex_unlock(&queue->mutex);
-//            return pop_front_fsm_event_queue(queue);
-//        }
-//        pthread_mutex_unlock(&queue->mutex);
-//        sleep(1);
-//    }
     pthread_mutex_lock(&queue->mutex);
     while(queue->first == NULL) {
         pthread_cond_wait(&queue->cond, &queue->mutex);
