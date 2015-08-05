@@ -87,7 +87,7 @@ ctest -V
 2: [INFO] (test_fsm.c:221) Benchmark for 1 step transition : ~1164.330000 ns
 ```
 
-#### RaspberyPi B2
+##### RaspberyPi B2
 ```
 2: [INFO] (test_fsm.c:195) Benchmark for 100000 step transition : 0.069285 s
 2: [INFO] (test_fsm.c:196) Benchmark for 1 step transition : ~692.850000 ns
