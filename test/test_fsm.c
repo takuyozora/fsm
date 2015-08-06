@@ -45,9 +45,9 @@ void test_fsm_start_stop(void **state){
     struct fsm_pointer *fsm = create_pointer();
     struct fsm_step *step_0 = create_step(fsm_null_callback, NULL);
     start_pointer(fsm, step_0);
-    assert_int_equal(fsm->running, 1);
+    assert_int_equal(fsm->running, FSM_STATE_RUNNING);
     join_pointer(fsm);
-    assert_int_equal(fsm->running, 0);
+    assert_int_equal(fsm->running, FSM_STATE_STOPPED);
     destroy_pointer(fsm);
     destroy_all_steps();
 }
@@ -173,6 +173,22 @@ void test_fsm_direct_transition(void **state){
     destroy_all_steps();
 }
 
+void test_fsm_break_direct_loop(void **state){
+    struct fsm_pointer *fsm = create_pointer();
+    struct fsm_step *step_0 = create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_1 = create_step(fsm_null_callback, NULL);
+
+    connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
+    connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
+
+    start_pointer(fsm, step_0);
+    assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, 100), 0);
+    join_pointer(fsm);
+    assert_int_equal(fsm->running, FSM_STATE_STOPPED);
+    destroy_pointer(fsm);
+    destroy_all_steps();
+}
+
 void benchmark_fsm_direct_transitions(void **state){
     struct fsm_pointer *fsm = create_pointer();
     int i = 0;
@@ -230,6 +246,7 @@ int main(void)
             cmocka_unit_test(test_fsm_passing_value_by_event),
             cmocka_unit_test(test_fsm_change_step_by_callback_return),
             cmocka_unit_test(test_fsm_direct_transition),
+            cmocka_unit_test(test_fsm_break_direct_loop),
             cmocka_unit_test(benchmark_fsm_direct_transitions),
             cmocka_unit_test(benchmark_fsm_ping_pong_transitions),
     };

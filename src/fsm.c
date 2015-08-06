@@ -59,7 +59,7 @@ struct fsm_pointer *create_pointer()
     pthread_cond_init(&pointer->cond_event, NULL);
     pointer->input_event = create_fsm_queue();
     pointer->current_step = NULL;
-    pointer->running = 0;
+    pointer->running = FSM_STATE_STOPPED;
     return pointer;
 }
 
@@ -71,13 +71,16 @@ struct fsm_pointer *create_pointer()
  */
 void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
     pthread_mutex_lock(&pointer->mutex);
-    if ( pointer->running != 0 ) {
+    if ( pointer->running != FSM_STATE_STOPPED ) {
         log_err("CRITICAL : A pointer can't be running twice a time");
         return;
     }
     pointer->current_step = init_step;
+    pointer->running = FSM_STATE_STARTING;
     pthread_create(&(pointer->thread), NULL, &pointer_loop, (void *)pointer);
-    pointer->running = 1;
+    while(pointer->running == FSM_STATE_STARTING){
+        pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
+    }
     pthread_mutex_unlock(&pointer->mutex);
 }
 
@@ -92,10 +95,14 @@ void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
  */
 void *pointer_loop(void * _pointer) {
     struct fsm_pointer * pointer = _pointer;
-    struct fsm_step * ret_step = pointer->current_step; // Allow to start the first step without transition
     struct fsm_event * new_event = generate_event(_EVENT_START_POINTER_UID, NULL);
+    struct fsm_step * ret_step = start_step(pointer, pointer->current_step, new_event); // Allow to start the first step without transition
     struct fsm_transition * reachable_transition = NULL;
     while (1){
+        if(pointer->running != FSM_STATE_RUNNING){
+            free(new_event);
+            break;
+        }
         if(ret_step != NULL){
             ret_step = start_step(pointer, ret_step, new_event);
             continue;
@@ -143,6 +150,9 @@ struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, 
     };
     pthread_mutex_lock(&pointer->mutex);
     pointer->current_step = step;
+    if(pointer->running == FSM_STATE_STARTING) {
+        pointer->running = FSM_STATE_RUNNING;
+    }
     pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
     return step->fnct(&init_context);
@@ -179,13 +189,13 @@ unsigned short destroy_all_steps() {
 
 void join_pointer(struct fsm_pointer *pointer) {
     pthread_mutex_lock(&pointer->mutex);
-    if(pointer->running == 1) {
+    if(pointer->running == FSM_STATE_RUNNING) {
         signal_fsm_pointer_of_event(pointer, generate_event(_EVENT_STOP_POINTER_UID, NULL));
-        //cleanup_fsm_queue(pointer->current_step->transitions); // To avoid direct transition inhibit stop event
+        pointer->running = FSM_STATE_CLOSING;
         pthread_mutex_unlock(&pointer->mutex);
         pthread_join(pointer->thread, NULL);
         pthread_mutex_lock(&pointer->mutex);
-        pointer->running = 0;
+        pointer->running = FSM_STATE_STOPPED;
     }
     cleanup_fsm_queue(&pointer->input_event);
     pthread_mutex_unlock(&pointer->mutex);
@@ -195,7 +205,7 @@ void *fsm_null_callback(struct fsm_context *context) {
     return NULL;
 }
 
-int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout) {
+int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout, char leave) {
     struct timeval tv;
     struct timespec ts;
     int rc = 0;
@@ -207,7 +217,7 @@ int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, 
     ts.tv_nsec %= (1000 * 1000 * 1000);
 
     pthread_mutex_lock(&pointer->mutex);
-    while (pointer->current_step != step){
+    while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
         rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->mutex, &ts);
         if (rc == ETIMEDOUT){
             break;
@@ -217,12 +227,30 @@ int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, 
     return rc;
 }
 
-int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step) {
+int _fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step, char leave) {
     int rc = 0;
     pthread_mutex_lock(&pointer->mutex);
-    while (pointer->current_step != step){
+    while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
         rc = pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
     }
     pthread_mutex_unlock(&pointer->mutex);
     return rc;
 }
+
+
+int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
+    return _fsm_wait_step_blocking(pointer, step, 0);
+}
+
+int fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
+    return _fsm_wait_step_blocking(pointer, step, 1);
+}
+
+int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout){
+    return _fsm_wait_step_mstimeout(pointer, step, mstimeout, 0);
+}
+
+int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout){
+    return _fsm_wait_step_mstimeout(pointer, step, mstimeout, 1);
+}
+

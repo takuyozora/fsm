@@ -9,6 +9,11 @@
 #include "pthread.h"
 #include "fsm_queue.h"
 
+#define FSM_STATE_STOPPED  0
+#define FSM_STATE_RUNNING  1
+#define FSM_STATE_STARTING 2
+#define FSM_STATE_CLOSING  3
+
 struct fsm_event
 {
     char uid[MAX_EVENT_UID_LEN];
@@ -55,6 +60,9 @@ unsigned short destroy_pointer(struct fsm_pointer *pointer);
 unsigned short destroy_all_steps();
 int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
 int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
+int fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
+int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
+
 
 void * fsm_null_callback(struct fsm_context *context);
 
