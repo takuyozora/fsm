@@ -43,6 +43,10 @@ int main(){
 }
 ```
 
+## Documentation
+
+You can find the documentation [here](http://takuyozora.github.io/fsm/fsm_8h.html)
+
 ## Requirement 
 
 For the library :
