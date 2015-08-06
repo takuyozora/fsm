@@ -243,23 +243,21 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
 }
 
 int _fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step, char leave) {
-    int rc = 0;
     pthread_mutex_lock(&pointer->mutex);
     // Wait that the given step become the current one or the opposite according to the leave value
     while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
-        rc = pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
+        pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
     }
     pthread_mutex_unlock(&pointer->mutex);
-    return rc;
 }
 
 
 void fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
-    return _fsm_wait_step_blocking(pointer, step, 0);
+    _fsm_wait_step_blocking(pointer, step, 0);
 }
 
 void fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
-    return _fsm_wait_step_blocking(pointer, step, 1);
+    _fsm_wait_step_blocking(pointer, step, 1);
 }
 
 int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout){
