@@ -52,13 +52,17 @@ For the library :
 For the unittest :
   - **cmocka** for unittest
   - **valgrind** for memory leaks checking
+  - *(optional)* **heaptrack** for memory usage tracking
   
 For the build process :
   - **cmake**
   - **make**
   - **gcc**
+  
+For the documentation generation :
+  - **doxygen**
 
-## Unittest and build procedure
+## Unittest, doc and build procedure
 
 #### In order to build the entire project
 ```
@@ -72,6 +76,15 @@ cmake .. && make
 ```
 ctest -V
 ```
+
+#### RTFM
+To generate documentation :
+```
+cd fsm/doc
+./generate_doc.sh
+```
+
+You can access it in `fsm/doc/html/index.html`
 
 ## Benchmark
 

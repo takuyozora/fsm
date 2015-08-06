@@ -7,7 +7,7 @@
 
 /*!
  * \file fsm.h
- * \brief API main header for the C FSM API
+ * \brief API main header of the C FSM API
  * \author Olivier Radisson <olivier.radisson _at_ insa-lyon.fr>
  * \version 0.1
  */
@@ -24,7 +24,7 @@
 #define FSM_STATE_CLOSING  3
 
 #define FSM_ERR_NOT_STOPPED 1
-#define FSM_ERR_NULL_POINTER 2
+//#define FSM_ERR_NULL_POINTER 2
 
 struct fsm_event
 {
