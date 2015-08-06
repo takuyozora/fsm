@@ -20,7 +20,7 @@
 #define MAX_INCREMENT_CALLBACK 100000
 
 void *callback_set_int_from_step_to_42(struct fsm_context *context){
-    *(int *)context->fnct_args = 42;
+    *(int *)context->pointer->current_step->args = 42;
     return NULL;
 }
 
@@ -34,8 +34,8 @@ void *callback_return_step_from_event(struct fsm_context *context){
 }
 
 void *callback_increment_int_from_step(struct fsm_context *context){
-    if (*(int *)context->fnct_args < MAX_INCREMENT_CALLBACK) {
-        (*(int *) context->fnct_args)++;
+    if (*(int *)context->pointer->current_step->args < MAX_INCREMENT_CALLBACK) {
+        (*(int *) context->pointer->current_step->args)++;
     }else{
         cleanup_fsm_queue(context->pointer->current_step->transitions);
     }
@@ -48,7 +48,7 @@ struct create_fsm{
 };
 
 void *callback_create_fsm(struct fsm_context *context){
-    struct create_fsm *data =((struct create_fsm *)context->fnct_args);
+    struct create_fsm *data =((struct create_fsm *)context->pointer->current_step->args);
     *data->pointer = create_pointer();
     struct fsm_step *step0 = create_step(fsm_null_callback, NULL);
     struct fsm_step *step1 = create_step(callback_set_int_from_step_to_42, data->data);

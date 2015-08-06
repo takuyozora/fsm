@@ -22,7 +22,6 @@ struct fsm_event
 
 struct fsm_context{
     struct fsm_event * event;
-    void * fnct_args; // Depreciate : should use pointer->current_step->fnct_args
     struct fsm_pointer *pointer;
 };
 

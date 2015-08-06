@@ -145,7 +145,6 @@ void *pointer_loop(void * _pointer) {
 struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
     struct fsm_context init_context = {
             .event = event,
-            .fnct_args = step->args,
             .pointer = pointer,
     };
     pthread_mutex_lock(&pointer->mutex);
