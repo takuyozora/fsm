@@ -45,7 +45,9 @@ int main(){
 
 ## Documentation
 
-You can find the documentation [here](http://takuyozora.github.io/fsm/fsm_8h.html)
+You can find the documentation [here](http://takuyozora.github.io/fsm/fsm_8h.html)  
+
+Do not hesitate to read, run and explore the `test/test_fsm.c` file which should be really useful if you want to understand quickly the API.
 
 ## Requirement 
 
