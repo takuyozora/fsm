@@ -25,19 +25,19 @@ void test_queue_push_pop_order(void **state){
     while (valueRand3 == valueRand1 || valueRand3 == valueRand2){
         valueRand3 = rand();
     }
-    int * pValue1 = push_back_fsm_queue(&queue, (void *)&valueRand1, sizeof(int));
-    int * pValue2 = push_back_fsm_queue(&queue, (void *)&valueRand2, sizeof(int));
-    int * pValue3 = push_back_fsm_queue(&queue, (void *)&valueRand3, sizeof(int));
+    int * pValue1 = fsm_queue_push_back(&queue, (void *) &valueRand1, sizeof(int));
+    int * pValue2 = fsm_queue_push_back(&queue, (void *) &valueRand2, sizeof(int));
+    int * pValue3 = fsm_queue_push_back(&queue, (void *) &valueRand3, sizeof(int));
 
-    int * pValuePop1 = pop_front_fsm_queue(&queue);
+    int * pValuePop1 = fsm_queue_pop_front(&queue);
     assert_int_equal(*pValue1, *pValuePop1);
     assert_ptr_equal(pValue1, pValuePop1);
 
-    int * pValuePop2 = pop_front_fsm_queue(&queue);
+    int * pValuePop2 = fsm_queue_pop_front(&queue);
     assert_int_equal(*pValue2, *pValuePop2);
     assert_ptr_equal(pValue2, pValuePop2);
 
-    int * pValuePop3 = pop_front_fsm_queue(&queue);
+    int * pValuePop3 = fsm_queue_pop_front(&queue);
     assert_int_equal(*pValue3, *pValuePop3);
     assert_ptr_equal(pValue3, pValuePop3);
 
@@ -57,7 +57,7 @@ void test_queue_push_pop_order(void **state){
 void * _test_queue_signal_producer(void * _queue){
     struct fsm_queue *queue = _queue;
     int value = 42;
-    push_back_fsm_queue(queue, (void *)&value, sizeof(int));
+    fsm_queue_push_back(queue, (void *) &value, sizeof(int));
     pthread_cond_signal(&queue->cond);
     return NULL;
 }
@@ -74,7 +74,7 @@ void test_queue_signal(void **state){
             wait++;
         }
         pthread_mutex_unlock(&queue.mutex);
-        int *pValue = pop_front_fsm_queue(&queue);
+        int *pValue = fsm_queue_pop_front(&queue);
         assert_int_equal(42, *pValue);
         free(pValue);
         cleanup_fsm_queue(&queue);

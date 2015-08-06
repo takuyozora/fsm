@@ -23,7 +23,7 @@ struct fsm_queue create_fsm_queue() {
     exit(1);
 }
 
-void * push_back_fsm_queue_more(
+void *fsm_queue_push_back_more(
         struct fsm_queue *queue, void *_value, const unsigned short size, unsigned short copy) {
     struct fsm_queue_elem * elem = malloc(sizeof(struct fsm_queue_elem));
     if (copy) {
@@ -46,12 +46,12 @@ void * push_back_fsm_queue_more(
     return elem->value;
 }
 
-void * push_back_fsm_queue(
+void *fsm_queue_push_back(
         struct fsm_queue *queue, void *_value, const unsigned short size) {
-    return push_back_fsm_queue_more(queue, _value, size, 1);
+    return fsm_queue_push_back_more(queue, _value, size, 1);
 }
 
-void *pop_front_fsm_queue(struct fsm_queue *queue) {
+void *fsm_queue_pop_front(struct fsm_queue *queue) {
     pthread_mutex_lock(&queue->mutex);
     if (queue->first == NULL){
         pthread_mutex_unlock(&queue->mutex);
@@ -72,7 +72,7 @@ void *pop_front_fsm_queue(struct fsm_queue *queue) {
 
 unsigned short cleanup_fsm_queue(struct fsm_queue *queue) {
     while(queue->first != NULL){
-        free(pop_front_fsm_queue(queue));
+        free(fsm_queue_pop_front(queue));
     }
     return 0;
 }
@@ -88,4 +88,32 @@ unsigned short destory_fsm_queue_pointer(struct fsm_queue *queue) {
     cleanup_fsm_queue(queue);
     free(queue);
     return 0;
+}
+
+void *fsm_queue_get_elem(struct fsm_queue *queue, void *elem) {
+    pthread_mutex_lock(&queue->mutex);
+    struct fsm_queue_elem *cursor = queue->first;
+    while(cursor != NULL){
+        if (cursor->value == elem){
+            // Found it, now we will remove it
+            if(cursor->next == NULL){
+                // Last item of the queue
+                queue->last = cursor->prev;
+            }else{
+                cursor->next->prev = cursor->prev;
+            }
+            if(cursor->prev == NULL){
+                // First item of the queue
+                queue->first = cursor->next;
+            }else{
+                cursor->prev->next = cursor->next;
+            }
+            free(cursor);   // Freeing the fsm_queue_elem to avoid memory leaks
+            pthread_mutex_unlock(&queue->mutex);
+            return elem;
+        }
+        cursor = cursor->next;
+    }
+    pthread_mutex_unlock(&queue->mutex);
+    return NULL;
 }

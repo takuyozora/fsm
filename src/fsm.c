@@ -94,6 +94,16 @@ void *fsm_pointer_loop(void *_pointer) {
     return NULL;
 }
 
+/*! This function delete indeed a step
+ *      @param step Pointer to the fsm_step to delete
+ *
+ *  @note fsm_queue transitions from the step is also delete
+ * */
+void _fsm_delete_a_step(fsm_step *step){
+    cleanup_fsm_queue(step->transitions);
+    free(step);
+}
+
 
 struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args) {
     if (_all_steps_created == NULL){
@@ -102,7 +112,7 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
     }
     struct fsm_step *step = malloc(sizeof(struct fsm_step));
     // Add the new step into the _all_steps_created to free after
-    step = push_back_fsm_queue_more(_all_steps_created, (void *)step, sizeof(*step), 0);
+    step = fsm_queue_push_back_more(_all_steps_created, (void *) step, sizeof(*step), 0);
     step->fnct = fnct;
     step->args = args;
     step->transitions = create_fsm_queue_pointer();
@@ -155,39 +165,46 @@ unsigned short fsm_start_pointer(struct fsm_pointer *pointer, struct fsm_step *i
 
 
 
-struct fsm_event *fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
-    return push_back_fsm_event_queue(&pointer->input_event, event);
+void fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
+    push_back_fsm_event_queue(&pointer->input_event, event);
 }
 
-unsigned short fsm_delete_pointer(struct fsm_pointer *pointer) {
+void fsm_delete_pointer(struct fsm_pointer *pointer) {
+//    if(pointer == NULL) {
+//        log_warn("Asking to delete a NULL fsm_pointer");
+//        return FSM_ERR_NULL_POINTER;
+//    }
     fsm_join_pointer(pointer);
     free(pointer);
-    pointer = NULL;
-    return 0;
 }
 
 struct fsm_event *fsm_generate_event(char *event_uid, void *args) {
     struct fsm_event *event = malloc(sizeof(struct fsm_event));
+    // Copy the given event UID to the new allocated event
     strcpy(event->uid, event_uid);
     event->args = args;
     return event;
 }
 
-unsigned short fsm_delete_all_steps() {
+void fsm_delete_all_steps() {
     while(_all_steps_created->first != NULL){
-        struct fsm_step *step = (struct fsm_step *)pop_front_fsm_queue(_all_steps_created);
-        destory_fsm_queue_pointer(step->transitions);
-        free(step);
+        struct fsm_step *step = (struct fsm_step *) fsm_queue_pop_front(_all_steps_created);
+        _fsm_delete_a_step(step);
     }
     destory_fsm_queue_pointer(_all_steps_created);
     _all_steps_created = NULL;
-    return 0;
 }
 
 void fsm_join_pointer(struct fsm_pointer *pointer) {
+    if (pointer == NULL){
+        log_warn("Asking to join a NULL fsm_pointer");
+        return;
+    }
     pthread_mutex_lock(&pointer->mutex);
     if(pointer->running == FSM_STATE_RUNNING) {
+        // Add signal to close in the pointer input_event queue
         fsm_signal_pointer_of_event(pointer, fsm_generate_event(_EVENT_STOP_POINTER_UID, NULL));
+        // Set pointer running step to closing in case the pointer do not whatch his transitions (because of a direct loop for example)
         pointer->running = FSM_STATE_CLOSING;
         pthread_mutex_unlock(&pointer->mutex);
         pthread_join(pointer->thread, NULL);
@@ -251,3 +268,10 @@ int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step
     return _fsm_wait_step_mstimeout(pointer, step, mstimeout, 1);
 }
 
+void fsm_delete_a_step(fsm_step *step) {
+    if(fsm_queue_get_elem(_all_steps_created, step) != NULL){
+        // We are sure that the step exist and we've removed it from _all_created_steps
+        // Now we can delete it safely
+        _fsm_delete_a_step(step);
+    }
+}

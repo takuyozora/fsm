@@ -22,6 +22,7 @@
 #define FSM_STATE_CLOSING  3
 
 #define FSM_ERR_NOT_STOPPED 1
+#define FSM_ERR_NULL_POINTER 2
 
 struct fsm_event
 {
@@ -104,18 +105,37 @@ struct fsm_event *fsm_generate_event(char *event_uid, void *args);
  *      @param _pointer Pointer to the fsm_pointer to start
  *      @param init_step Pointer to the fsm_step which will be reached by the fsm_pointer
  *
+ *  @retval 0 if the fsm_pointer correctly started
+ *  @retval FSM_ERR_NOT_STOPPED if the fsm_pointer wasn't already stopped
+ *
  * Check if the pointer is stopped, and start it in a new thread at the given step.
+ *
+ * Example:
+ * @code{.c}
+ * fsm_pointer *fsm = fsm_create_pointer();
+ * fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
+ *
+ * if(fsm_start_pointer(fsm, step_0) != 0){
+ *      // Do something about this error
+ * }
+ *
+ * fsm_join_pointer(fsm);
+ * fsm_delete_pointer(fsm);
+ * fsm_delete_all_steps();
+ * @endcode
  *
  * @note This function assure that the first step his launched but not end
  */
 unsigned short fsm_start_pointer(struct fsm_pointer *_pointer, struct fsm_step *init_step);
 
+/*! Ask a fsm_pointer to stop and wait for it to join
+ *      @param pointer Pointer to the fsm_pointer to join
+ */
 void fsm_join_pointer(struct fsm_pointer *pointer);
 
-
-/*! Create a step pointer based on a callback function and generic void pointer as argument.
+/*! Create a fsm_step pointer based on a callback function and generic void pointer as argument.
  *      @param  fnct Callback function which be called when entering step.
- *      @param  args Pointer which be passed to the callback function. Can be set to NULL.
+ *      @param  args Pointer which be passed to the callback function. Can be set to \a NULL.
  *
  *  @return Pointer to the new created fsm_step.
  *
@@ -142,21 +162,32 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
  * fsm_delete_all_steps();
  * @endcode
  *
- * @note The transition his freed with the step in which it's attached
+ * @note The transition his freed with the step with fsm_delete_all_steps()
  */
 void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid);
-struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event);
 
-/*! Signal a fsm_pointer of a new event
+void fsm_delete_a_step(fsm_step *step);
+
+/*! Signal a fsm_pointer of an event
+ *      @param pointer Pointer to the fsm_pointer concern by the event
+ *      @param event Pointer to the event to signal
  *
+ *  The given fsm_event is copied into the memory and store into the input_event fsm_queue of the given fsm_pointer. So you can't modify it after this.
+ *
+ *  @see fsm_generate_event(char*,void*)
  */
-struct fsm_event *fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event);
+void fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event);
+
 /*! Delete in the straight way the given fsm_pointer
+ *      @param pointer Pointer to the fsm_pointer to delete
  *
- *
+ * @warning SEGFAULT if the pointer have been already freed
  */
-unsigned short fsm_delete_pointer(struct fsm_pointer *pointer);
-unsigned short fsm_delete_all_steps();
+void fsm_delete_pointer(struct fsm_pointer *pointer);
+
+/*! Delete all steps which have been created
+ */
+void fsm_delete_all_steps();
 int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
 int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
 int fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);

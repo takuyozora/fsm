@@ -7,7 +7,8 @@
 #include "debug.h"
 
 struct fsm_transition *push_back_fsm_transition_queue(struct fsm_queue *queue, struct fsm_transition *transition) {
-    return (struct fsm_transition *)push_back_fsm_queue(queue, (void *)transition, sizeof(*transition));
+    return (struct fsm_transition *) fsm_queue_push_back(queue, (void *) transition,
+                                                         sizeof(*transition));
 }
 
 struct fsm_transition *get_reachable_condition(struct fsm_queue *queue, struct fsm_event *event) {
