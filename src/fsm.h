@@ -12,6 +12,8 @@
  * \version 0.1
  */
 
+#include <sys/time.h>
+
 #include "events.h"
 #include "pthread.h"
 #include "fsm_queue.h"
@@ -166,6 +168,11 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
  */
 void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid);
 
+/*! Delete an unique step
+ *      @param step Pointer to the fsm_step to delete
+ *
+ *  @note Safe if the step have been already freed by fsm_delete_all_steps()
+ *  */
 void fsm_delete_a_step(fsm_step *step);
 
 /*! Signal a fsm_pointer of an event
@@ -186,14 +193,72 @@ void fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *
 void fsm_delete_pointer(struct fsm_pointer *pointer);
 
 /*! Delete all steps which have been created
+ *
+ * @note Safe if a step have been individual freed by fsm_delete_a_step(fsm_step*)
  */
 void fsm_delete_all_steps();
+
+/*! Wait the given pointer to reach the given step in the given timeout interval
+ *      @param pointer Pointer to the fsm_pointer to wait
+ *      @param step Pointer to the fsm_step the \a pointer must reach
+ *      @param mstimeout Timeout value in ms
+ *
+ *  @retval 0 if the given step have been reached by the pointer
+ *  @retval ETIMEDOUT if the step is not reached in the given time
+ *
+ *  @note Direclty return 0 if the fsm_pointer already is in the given fsm_step
+ *
+ *  @see fsm_wait_step_blocking(fsm_pointer*,fsm_step*)
+ *  @see fsm_wait_leaving_step_blocking(fsm_pointer*,fsm_step*)
+ *  @see fsm_wait_leaving_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  */
 int fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
-int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
-int fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
+
+/*! Wait the given pointer to reach the given step.
+ *      @param pointer Pointer to the fsm_pointer to wait
+ *      @param step Pointer to the fsm_step the \a pointer must reach
+ *
+ *  @note Direclty return if the fsm_pointer already is in the given fsm_step
+ *
+ *  @see fsm_wait_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  @see fsm_wait_leaving_step_blocking(fsm_pointer*,fsm_step*)
+ *  @see fsm_wait_leaving_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  */
+void fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
+
+/*! Wait the given pointer to leave the given step.
+ *      @param pointer Pointer to the fsm_pointer to wait
+ *      @param step Pointer to the fsm_step the \a pointer must leave
+ *
+ *  @note Direclty return if the fsm_pointer already isn't in the given fsm_step
+ *
+ *  @see fsm_wait_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  @see fsm_wait_step_blocking(fsm_pointer*,fsm_step*)
+ *  @see fsm_wait_leaving_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  */
+void fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step);
+
+/*! Wait the given pointer to leave the given step in the given timeout interval
+ *      @param pointer Pointer to the fsm_pointer to wait
+ *      @param step Pointer to the fsm_step the \a pointer must leave
+ *      @param mstimeout Timeout value in ms
+ *
+ *  @retval 0 if the given step have been leaved by the pointer
+ *  @retval ETIMEDOUT if the step is not leaved in the given time
+ *
+ *  @note Direclty return 0 if the fsm_pointer already isn't in the given fsm_step
+ *
+ *  @see fsm_wait_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
+ *  @see fsm_wait_step_blocking(fsm_pointer*,fsm_step*)
+ *  @see fsm_wait_leaving_step_blocking(fsm_pointer*,fsm_step*)
+ *  */
 int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
 
-
+/*! Useless function which return a NULL pointer to create wait steps
+ *      @param context Pointer to the fsm_context in which one the function is called.
+ *
+ *  @retval NULL
+ *  */
 void * fsm_null_callback(struct fsm_context *context);
 
 

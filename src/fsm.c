@@ -8,7 +8,6 @@
 #include "fsm_transition_queue.h"
 #include "stdio.h"
 #include "debug.h"
-#include <sys/time.h>
 
 // Global var to keep a trace of all steps created in order to free them at the end
 static struct fsm_queue *_all_steps_created = NULL;
@@ -224,6 +223,7 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
     struct timespec ts;
     int rc = 0;
 
+    // Creating correct time variable for an absolute time from the given time in ms
     gettimeofday(&tv, NULL);
     ts.tv_sec = time(NULL) + mstimeout / 1000;
     ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (mstimeout % 1000);
@@ -231,6 +231,7 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
     ts.tv_nsec %= (1000 * 1000 * 1000);
 
     pthread_mutex_lock(&pointer->mutex);
+    // Wait that the given step become the current one or the opposite according to the leave value
     while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
         rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->mutex, &ts);
         if (rc == ETIMEDOUT){
@@ -244,6 +245,7 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
 int _fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step, char leave) {
     int rc = 0;
     pthread_mutex_lock(&pointer->mutex);
+    // Wait that the given step become the current one or the opposite according to the leave value
     while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
         rc = pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
     }
@@ -252,11 +254,11 @@ int _fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step, 
 }
 
 
-int fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
+void fsm_wait_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
     return _fsm_wait_step_blocking(pointer, step, 0);
 }
 
-int fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
+void fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step *step){
     return _fsm_wait_step_blocking(pointer, step, 1);
 }
 
