@@ -14,17 +14,13 @@
 static struct fsm_queue *_all_steps_created = NULL;
 
 
-/*! Simplify step creation.
- *
- *  Create a step from a function and a void pointer as argument for it.
- *  This function initialize transition to TRANS_ENDPOINT, a null transition
- *
- */
-struct fsm_step * create_step(void *(*fnct)(struct fsm_context *), void *args) {
+struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args) {
     if (_all_steps_created == NULL){
+        // Init _all_steps_created if it's still a NULL pointer
         _all_steps_created = create_fsm_queue_pointer();
     }
     struct fsm_step *step = malloc(sizeof(struct fsm_step));
+    // Add the new step into the _all_steps_created to free after
     step = push_back_fsm_queue_more(_all_steps_created, (void *)step, sizeof(*step), 0);
     step->fnct = fnct;
     step->args = args;
@@ -32,13 +28,8 @@ struct fsm_step * create_step(void *(*fnct)(struct fsm_context *), void *args) {
     return step;
 }
 
-/*! Connect two step with an event by creating a transition
- *
- * Create a transition for the given event which refer to the \a to step and
- * attach it to the \a from step
- *
- */
-void connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
+
+void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
     struct fsm_transition transition = {
             .next_step = to,
     };
@@ -51,7 +42,7 @@ void connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
  * Create a pointer. Do not start it and just init other thread vars
  *
  */
-struct fsm_pointer *create_pointer()
+struct fsm_pointer *fsm_create_pointer()
 {
     struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
     pointer->thread = 0;
@@ -69,7 +60,7 @@ struct fsm_pointer *create_pointer()
  * in a new thread on the given step
  *
  */
-void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
+void fsm_start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
     pthread_mutex_lock(&pointer->mutex);
     if ( pointer->running != FSM_STATE_STOPPED ) {
         log_err("CRITICAL : A pointer can't be running twice a time");
@@ -77,7 +68,7 @@ void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
     }
     pointer->current_step = init_step;
     pointer->running = FSM_STATE_STARTING;
-    pthread_create(&(pointer->thread), NULL, &pointer_loop, (void *)pointer);
+    pthread_create(&(pointer->thread), NULL, &fsm_pointer_loop, (void *) pointer);
     while(pointer->running == FSM_STATE_STARTING){
         pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
     }
@@ -89,14 +80,14 @@ void start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
  * The main loop of a pointer thread execute a step and wait for a transition
  * when this one ended.
  *
- * This function shouldn't be called from an other place that start_pointer function
+ * This function shouldn't be called from an other place that fsm_start_pointer function
  *
  * NOT FULLY IMPLEMENTED
  */
-void *pointer_loop(void * _pointer) {
+void *fsm_pointer_loop(void *_pointer) {
     struct fsm_pointer * pointer = _pointer;
-    struct fsm_event * new_event = generate_event(_EVENT_START_POINTER_UID, NULL);
-    struct fsm_step * ret_step = start_step(pointer, pointer->current_step, new_event); // Allow to start the first step without transition
+    struct fsm_event * new_event = fsm_generate_event(_EVENT_START_POINTER_UID, NULL);
+    struct fsm_step * ret_step = fsm_start_step(pointer, pointer->current_step, new_event); // Allow to start the first step without transition
     struct fsm_transition * reachable_transition = NULL;
     while (1){
         if(pointer->running != FSM_STATE_RUNNING){
@@ -104,14 +95,14 @@ void *pointer_loop(void * _pointer) {
             break;
         }
         if(ret_step != NULL){
-            ret_step = start_step(pointer, ret_step, new_event);
+            ret_step = fsm_start_step(pointer, ret_step, new_event);
             continue;
         }
         if(pointer->current_step->transitions->first != NULL){ // Check if there isn't direct transition
             if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid,
                 _EVENT_DIRECT_TRANSITION) == 0){
                 // Then we direct go to next step
-                ret_step = start_step(pointer, ((struct fsm_transition *)
+                ret_step = fsm_start_step(pointer, ((struct fsm_transition *)
                         (pointer->current_step->transitions->first->value))->next_step, new_event);
                 continue;
             }
@@ -126,7 +117,7 @@ void *pointer_loop(void * _pointer) {
             }
             reachable_transition = get_reachable_condition(pointer->current_step->transitions, new_event);
             if (reachable_transition != NULL){
-                ret_step = start_step(pointer, reachable_transition->next_step, new_event);
+                ret_step = fsm_start_step(pointer, reachable_transition->next_step, new_event);
                 continue;
             }
         }
@@ -142,7 +133,7 @@ void *pointer_loop(void * _pointer) {
  * Create the appropriate context and start the step function with it
  *
  */
-struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
+struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
     struct fsm_context init_context = {
             .event = event,
             .pointer = pointer,
@@ -157,25 +148,25 @@ struct fsm_step *start_step(struct fsm_pointer *pointer, struct fsm_step *step, 
     return step->fnct(&init_context);
 }
 
-struct fsm_event *signal_fsm_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
+struct fsm_event *fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
     return push_back_fsm_event_queue(&pointer->input_event, event);
 }
 
-unsigned short destroy_pointer(struct fsm_pointer *pointer) {
-    join_pointer(pointer);
+unsigned short fsm_delete_pointer(struct fsm_pointer *pointer) {
+    fsm_join_pointer(pointer);
     free(pointer);
     pointer = NULL;
     return 0;
 }
 
-struct fsm_event * generate_event(char *event_uid, void *args) {
+struct fsm_event *fsm_generate_event(char *event_uid, void *args) {
     struct fsm_event *event = malloc(sizeof(struct fsm_event));
     strcpy(event->uid, event_uid);
     event->args = args;
     return event;
 }
 
-unsigned short destroy_all_steps() {
+unsigned short fsm_delete_all_steps() {
     while(_all_steps_created->first != NULL){
         struct fsm_step *step = (struct fsm_step *)pop_front_fsm_queue(_all_steps_created);
         destory_fsm_queue_pointer(step->transitions);
@@ -186,10 +177,10 @@ unsigned short destroy_all_steps() {
     return 0;
 }
 
-void join_pointer(struct fsm_pointer *pointer) {
+void fsm_join_pointer(struct fsm_pointer *pointer) {
     pthread_mutex_lock(&pointer->mutex);
     if(pointer->running == FSM_STATE_RUNNING) {
-        signal_fsm_pointer_of_event(pointer, generate_event(_EVENT_STOP_POINTER_UID, NULL));
+        fsm_signal_pointer_of_event(pointer, fsm_generate_event(_EVENT_STOP_POINTER_UID, NULL));
         pointer->running = FSM_STATE_CLOSING;
         pthread_mutex_unlock(&pointer->mutex);
         pthread_join(pointer->thread, NULL);
