@@ -13,6 +13,7 @@
 
 
 #include "fsm.h"
+#define NDEBUG
 #include "debug.h"
 #include "benchmark.h"
 
@@ -38,6 +39,21 @@ void *callback_increment_int_from_step(struct fsm_context *context){
     }else{
         cleanup_fsm_queue(context->pointer->current_step->transitions);
     }
+    return NULL;
+}
+
+struct create_fsm{
+    struct fsm_pointer **pointer;
+    int *data;
+};
+
+void *callback_create_fsm(struct fsm_context *context){
+    struct create_fsm *data =((struct create_fsm *)context->fnct_args);
+    *data->pointer = create_pointer();
+    struct fsm_step *step0 = create_step(fsm_null_callback, NULL);
+    struct fsm_step *step1 = create_step(callback_set_int_from_step_to_42, data->data);
+    connect_step(step0, step1, "GO");
+    start_pointer(*data->pointer, step0);
     return NULL;
 }
 
@@ -189,6 +205,30 @@ void test_fsm_break_direct_loop(void **state){
     destroy_all_steps();
 }
 
+void test_fsm_memory_persistence(void **state){
+    struct fsm_pointer *fsm_base = create_pointer();
+    struct fsm_pointer *fsm_dyn  = NULL;
+    int value = 0;
+    struct create_fsm data = {
+            .pointer = &fsm_dyn,
+            .data = &value,
+    };
+    struct fsm_step *step_0 = create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_1 = create_step(callback_create_fsm, (void *)&data);
+    connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
+    start_pointer(fsm_base, step_0);
+    assert_int_equal(fsm_wait_step_mstimeout(fsm_base, step_1, 250), 0);
+    join_pointer(fsm_base);
+    destroy_pointer(fsm_base);
+    struct fsm_step *step_0_dyn = fsm_dyn->current_step;
+    signal_fsm_pointer_of_event(fsm_dyn, generate_event("GO", NULL));
+    assert_int_equal(fsm_wait_leaving_step_mstimeout(fsm_dyn, step_0_dyn, 250), 0);
+    join_pointer(fsm_dyn);
+    assert_int_equal(value, 42);
+    destroy_pointer(fsm_dyn);
+    destroy_all_steps();
+}
+
 void benchmark_fsm_direct_transitions(void **state){
     struct fsm_pointer *fsm = create_pointer();
     int i = 0;
@@ -222,9 +262,19 @@ void benchmark_fsm_ping_pong_transitions(void **state){
 
     double start_time = bm_get_clock();
     start_pointer(fsm, step_0);
-    for(int i=0; i <= MAX_INCREMENT_CALLBACK; i++){
+    for(int i=0; i < MAX_INCREMENT_CALLBACK; i++){
         signal_fsm_pointer_of_event(fsm, generate_event("NEXT", NULL));
+        debug("i = %d", i);
+        debug("step == step0 : %d", fsm->current_step==step_0);
+        debug("step == step1 : %d", fsm->current_step==step_1);
+        /*if(i%2 == 1) {
+            fsm_wait_step_blocking(fsm, step_0);
+        }else{
+            fsm_wait_step_blocking(fsm, step_1);
+        }*/
+        debug("Unlock..");
     }
+    debug("Join");
     join_pointer(fsm);
     double diff_time = bm_get_clock() - start_time;
 
@@ -247,6 +297,7 @@ int main(void)
             cmocka_unit_test(test_fsm_change_step_by_callback_return),
             cmocka_unit_test(test_fsm_direct_transition),
             cmocka_unit_test(test_fsm_break_direct_loop),
+            cmocka_unit_test(test_fsm_memory_persistence),
             cmocka_unit_test(benchmark_fsm_direct_transitions),
             cmocka_unit_test(benchmark_fsm_ping_pong_transitions),
     };
