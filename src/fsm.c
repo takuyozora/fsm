@@ -14,75 +14,43 @@
 static struct fsm_queue *_all_steps_created = NULL;
 
 
-struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args) {
-    if (_all_steps_created == NULL){
-        // Init _all_steps_created if it's still a NULL pointer
-        _all_steps_created = create_fsm_queue_pointer();
-    }
-    struct fsm_step *step = malloc(sizeof(struct fsm_step));
-    // Add the new step into the _all_steps_created to free after
-    step = push_back_fsm_queue_more(_all_steps_created, (void *)step, sizeof(*step), 0);
-    step->fnct = fnct;
-    step->args = args;
-    step->transitions = create_fsm_queue_pointer();
-    return step;
-}
-
-
-void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
-    struct fsm_transition transition = {
-            .next_step = to,
+/*! Start a step function with the appropriate context
+ *      @param pointer Pointer to the fsm_pointer entering to the given step
+ *      @param step Pointer to the new fsm_step to run
+ *      @param event Pointer to the event which have triggered the transition
+ *
+ * @return Return the output of the fsm_step callback function
+ * @retval NULL in most cases
+ * @retval fsm_step pointer to the next step to go
+ *
+ * @note If the return is not a NULL pointer the fsm_pointer will directly go to this step without looking for
+ * @note any transition.
+ *
+ */
+struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
+    struct fsm_context init_context = {
+            .event = event,
+            .pointer = pointer,
     };
-    strcpy(transition.event_uid, event_uid);
-    push_back_fsm_transition_queue(from->transitions, &transition);
-}
-
-/*! Create a pointer wich is the main part of a FSM
- *
- * Create a pointer. Do not start it and just init other thread vars
- *
- */
-struct fsm_pointer *fsm_create_pointer()
-{
-    struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
-    pointer->thread = 0;
-    pthread_mutex_init(&pointer->mutex, NULL);
-    pthread_cond_init(&pointer->cond_event, NULL);
-    pointer->input_event = create_fsm_queue();
-    pointer->current_step = NULL;
-    pointer->running = FSM_STATE_STOPPED;
-    return pointer;
-}
-
-/*! Start the given pointer at the given step in a thread
- *
- * Check if the pointer isn't already running, if not start it
- * in a new thread on the given step
- *
- */
-void fsm_start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
     pthread_mutex_lock(&pointer->mutex);
-    if ( pointer->running != FSM_STATE_STOPPED ) {
-        log_err("CRITICAL : A pointer can't be running twice a time");
-        return;
+    pointer->current_step = step;
+    if(pointer->running == FSM_STATE_STARTING) {
+        pointer->running = FSM_STATE_RUNNING;
     }
-    pointer->current_step = init_step;
-    pointer->running = FSM_STATE_STARTING;
-    pthread_create(&(pointer->thread), NULL, &fsm_pointer_loop, (void *) pointer);
-    while(pointer->running == FSM_STATE_STARTING){
-        pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
-    }
+    pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
+    return step->fnct(&init_context);
 }
 
-/*! Main loop for the pointer thread, run step and wait for event
+
+/*! Main loop for the pointer thread, run step and wait for events
+ *      @param pointer Generic void pointer to the fsm_pointer which will be managed by the loop
  *
  * The main loop of a pointer thread execute a step and wait for a transition
  * when this one ended.
  *
- * This function shouldn't be called from an other place that fsm_start_pointer function
+ * @warning This function shouldn't be called from an other place that fsm_start_pointer function
  *
- * NOT FULLY IMPLEMENTED
  */
 void *fsm_pointer_loop(void *_pointer) {
     struct fsm_pointer * pointer = _pointer;
@@ -100,7 +68,7 @@ void *fsm_pointer_loop(void *_pointer) {
         }
         if(pointer->current_step->transitions->first != NULL){ // Check if there isn't direct transition
             if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid,
-                _EVENT_DIRECT_TRANSITION) == 0){
+                      _EVENT_DIRECT_TRANSITION) == 0){
                 // Then we direct go to next step
                 ret_step = fsm_start_step(pointer, ((struct fsm_transition *)
                         (pointer->current_step->transitions->first->value))->next_step, new_event);
@@ -127,26 +95,65 @@ void *fsm_pointer_loop(void *_pointer) {
 }
 
 
-
-/*! Start a step function with the appropriate context
- *
- * Create the appropriate context and start the step function with it
- *
- */
-struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *step, struct fsm_event *event) {
-    struct fsm_context init_context = {
-            .event = event,
-            .pointer = pointer,
-    };
-    pthread_mutex_lock(&pointer->mutex);
-    pointer->current_step = step;
-    if(pointer->running == FSM_STATE_STARTING) {
-        pointer->running = FSM_STATE_RUNNING;
+struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args) {
+    if (_all_steps_created == NULL){
+        // Init _all_steps_created if it's still a NULL pointer
+        _all_steps_created = create_fsm_queue_pointer();
     }
-    pthread_cond_broadcast(&pointer->cond_event);
-    pthread_mutex_unlock(&pointer->mutex);
-    return step->fnct(&init_context);
+    struct fsm_step *step = malloc(sizeof(struct fsm_step));
+    // Add the new step into the _all_steps_created to free after
+    step = push_back_fsm_queue_more(_all_steps_created, (void *)step, sizeof(*step), 0);
+    step->fnct = fnct;
+    step->args = args;
+    step->transitions = create_fsm_queue_pointer();
+    return step;
 }
+
+
+void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_uid) {
+    struct fsm_transition transition = {
+            .next_step = to,
+    };
+    // Copy the event's UID to the transition
+    strcpy(transition.event_uid, event_uid);
+    // Add transition to the from transition queue
+    push_back_fsm_transition_queue(from->transitions, &transition);
+}
+
+
+struct fsm_pointer *fsm_create_pointer()
+{
+    struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
+    pointer->thread = 0;
+    // Init thread mutex and condition
+    pthread_mutex_init(&pointer->mutex, NULL);
+    pthread_cond_init(&pointer->cond_event, NULL);
+    //
+    pointer->input_event = create_fsm_queue();
+    pointer->current_step = NULL;
+    pointer->running = FSM_STATE_STOPPED;
+    return pointer;
+}
+
+
+unsigned short fsm_start_pointer(struct fsm_pointer *pointer, struct fsm_step *init_step) {
+    pthread_mutex_lock(&pointer->mutex);
+    if ( pointer->running != FSM_STATE_STOPPED ) {
+        log_err("A pointer can't be started if it's not stopped");
+        return FSM_ERR_NOT_STOPPED;
+    }
+    pointer->current_step = init_step;
+    pointer->running = FSM_STATE_STARTING;
+    pthread_create(&(pointer->thread), NULL, &fsm_pointer_loop, (void *) pointer);
+    // Waiting for the pointer to start his first step
+    while(pointer->running == FSM_STATE_STARTING){
+        pthread_cond_wait(&pointer->cond_event, &pointer->mutex);
+    }
+    pthread_mutex_unlock(&pointer->mutex);
+    return 0;
+}
+
+
 
 struct fsm_event *fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
     return push_back_fsm_event_queue(&pointer->input_event, event);
