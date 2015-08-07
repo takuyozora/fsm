@@ -73,7 +73,7 @@ typedef struct fsm_context fsm_context;
  *
  *  @return Pointer to the new created fsm_pointer
  *
- *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of it's usage
+ *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of his usage
  *  @note The fsm_delete_pointer(fsm_pointer*) function help you to free the pointer correctly
  *
  */
@@ -124,7 +124,7 @@ void fsm_delete_pointer(struct fsm_pointer *pointer);
  *
  *  @return Pointer to the new created fsm_step.
  *
- *  @note It uses c malloc for the fsm_step allocation : you should free it at the end of it's usage
+ *  @note It uses c malloc for the fsm_step allocation : you should free it at the end of his usage
  *  @note The fsm_delete_all_steps() function allow you the free all allocated steps
  */
 struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args);
@@ -170,7 +170,7 @@ void fsm_delete_all_steps();
  *
  *  @return Pointer to the new generated fsm_event
  *
- *  @note It uses \c malloc for the fsm_event allocation : you should free it at the end of it's usage
+ *  @note It uses \c malloc for the fsm_event allocation : you should free it at the end of his usage
  *  @note The event is freed automatically by the fsm process if you directly put it in the input_event fsm_queue from a fsm_pointer with fsm_signal_pointer_of_event(fsm_pointer*,fsm_event*)
  *
  * Example:

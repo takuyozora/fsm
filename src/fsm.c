@@ -99,7 +99,7 @@ void *fsm_pointer_loop(void *_pointer) {
  *  @note fsm_queue transitions from the step is also delete
  * */
 void _fsm_delete_a_step(fsm_step *step){
-    cleanup_fsm_queue(step->transitions);
+    fsm_queue_cleanup(step->transitions);
     free(step);
 }
 
@@ -190,7 +190,7 @@ void fsm_delete_all_steps() {
         struct fsm_step *step = (struct fsm_step *) fsm_queue_pop_front(_all_steps_created);
         _fsm_delete_a_step(step);
     }
-    destory_fsm_queue_pointer(_all_steps_created);
+    fsm_queue_delete_queue_pointer(_all_steps_created);
     _all_steps_created = NULL;
 }
 
@@ -210,7 +210,7 @@ void fsm_join_pointer(struct fsm_pointer *pointer) {
         pthread_mutex_lock(&pointer->mutex);
         pointer->running = FSM_STATE_STOPPED;
     }
-    cleanup_fsm_queue(&pointer->input_event);
+    fsm_queue_cleanup(&pointer->input_event);
     pthread_mutex_unlock(&pointer->mutex);
 }
 

@@ -25,23 +25,29 @@ struct fsm_queue create_fsm_queue() {
 
 void *fsm_queue_push_back_more(
         struct fsm_queue *queue, void *_value, const unsigned short size, unsigned short copy) {
+    // Alocate memory for the new fsm_queue_elem
     struct fsm_queue_elem * elem = malloc(sizeof(struct fsm_queue_elem));
     if (copy) {
+        // Allocate memory into the heap for the given pointer
         elem->value = malloc(size);
+        // Copy memory
         memcpy(elem->value, _value, size);
     }else{
+        // Just store the pointer
         elem->value = _value;
     }
-    elem->next = NULL;
+    elem->next = NULL; // It's the last elem
     pthread_mutex_lock(&queue->mutex);
-    elem->prev = queue->last;
+    elem->prev = queue->last; // Before it, is the old last elem
     if (elem->prev != NULL) {
+        // If there was someone before, make it know that it isn't the last anymore
         elem->prev->next = elem;
     }else{
+        // If not we also are the first elem
         queue->first = elem;
     }
-    queue->last = elem;
-    pthread_cond_broadcast(&queue->cond);
+    queue->last = elem; // Tell the queue that we are the new last elem
+    pthread_cond_broadcast(&queue->cond); // Signal a change into the queue
     pthread_mutex_unlock(&queue->mutex);
     return elem->value;
 }
@@ -54,40 +60,48 @@ void *fsm_queue_push_back(
 void *fsm_queue_pop_front(struct fsm_queue *queue) {
     pthread_mutex_lock(&queue->mutex);
     if (queue->first == NULL){
+        // If the queue is empty return NULL
         pthread_mutex_unlock(&queue->mutex);
         return NULL;
     }
     void * value = queue->first->value;
+    // Store pointer to the first fsm_queue_elem in order to free it later
     struct fsm_queue_elem *fsm_elem_to_free = queue->first;
+    // Tell the queue that the new first element have change
     queue->first = queue->first->next;
+    // Free the fsm_queue_elem which stored the value
     free(fsm_elem_to_free);
     if(queue->first != NULL) {
+        // Tell the new first element that there isn't something behind it anymore
         queue->first->prev = NULL;
     }else{
+        // If it was the last element, put last pointer of the queue to NULL
         queue->last = NULL;
     }
     pthread_mutex_unlock(&queue->mutex);
     return value;
 }
 
-unsigned short cleanup_fsm_queue(struct fsm_queue *queue) {
+void fsm_queue_cleanup(struct fsm_queue *queue) {
     while(queue->first != NULL){
         free(fsm_queue_pop_front(queue));
     }
-    return 0;
 }
 
 struct fsm_queue *create_fsm_queue_pointer() {
+    // Create a fsm_queue
     struct fsm_queue _q = create_fsm_queue();
+    // Allocate memory into the heap
     struct fsm_queue * queue = malloc(sizeof(struct fsm_queue));
+    // Copy stack fsm_queue to heap memory
     memcpy(queue, &_q, sizeof(struct fsm_queue));
+    // Return pointer to the heap memory
     return queue;
 }
 
-unsigned short destory_fsm_queue_pointer(struct fsm_queue *queue) {
-    cleanup_fsm_queue(queue);
+void fsm_queue_delete_queue_pointer(struct fsm_queue *queue) {
+    fsm_queue_cleanup(queue);
     free(queue);
-    return 0;
 }
 
 void *fsm_queue_get_elem(struct fsm_queue *queue, void *elem) {

@@ -37,7 +37,7 @@ void *callback_increment_int_from_step(struct fsm_context *context){
     if (*(int *)context->pointer->current_step->args < MAX_INCREMENT_CALLBACK) {
         (*(int *) context->pointer->current_step->args)++;
     }else{
-        cleanup_fsm_queue(context->pointer->current_step->transitions);
+        fsm_queue_cleanup(context->pointer->current_step->transitions);
     }
     return NULL;
 }

@@ -50,7 +50,7 @@ void test_queue_push_pop_order(void **state){
     free(pValue2);
     free(pValue3);
 
-    cleanup_fsm_queue(&queue);
+    fsm_queue_cleanup(&queue);
 }
 
 
@@ -77,7 +77,7 @@ void test_queue_signal(void **state){
         int *pValue = fsm_queue_pop_front(&queue);
         assert_int_equal(42, *pValue);
         free(pValue);
-        cleanup_fsm_queue(&queue);
+        fsm_queue_cleanup(&queue);
         while(pthread_join(thread, NULL) != 0){
             debug("Error on loop %d joining thread ", i);
         }
