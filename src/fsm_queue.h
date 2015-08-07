@@ -2,6 +2,13 @@
 // Created by olivier on 04/08/15.
 //
 
+/*!
+ * \file fsm_queue.h
+ * \brief Thread safe queue used by fsm.h
+ * \author Olivier Radisson <olivier.radisson _at_ insa-lyon.fr>
+ * \version 0.1
+ */
+
 #ifndef FSM_QUEUE_H
 #define FSM_QUEUE_H
 
