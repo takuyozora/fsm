@@ -10,7 +10,31 @@
  * \brief API main header of the C FSM API
  * \author Olivier Radisson <olivier.radisson _at_ insa-lyon.fr>
  * \version 0.1
- */
+ *
+ * Exemple :
+ * @code{.c}
+ * // Passing a value to a step in order to modify it
+ *
+ * #include "fsm.h"
+ *
+ * void *callback_set_int_from_step_to_42(struct fsm_context *context){
+ *   *(int *)context->pointer->current_step->args = 42;
+ *   return NULL;
+ * }
+ *
+ * int main(){
+ *   struct fsm_pointer *fsm = fsm_create_pointer();
+ *   int value = 5;
+ *   struct fsm_step *step_0 = fsm_create_step(callback_set_int_from_step_to_42, (void *) &value);
+ *   fsm_start_pointer(fsm, step_0);
+ *   fsm_join_pointer(fsm);
+ *   fsm_delete_pointer(fsm);
+ *   fsm_delete_all_steps();
+ *
+ *   return value == 42;
+ * }
+ * @endcode
+ * */
 
 #include <sys/time.h>
 
@@ -72,6 +96,11 @@ typedef struct fsm_context fsm_context;
 /*! Create a pointer. Don't start it, just init variables
  *
  *  @return Pointer to the new created fsm_pointer
+ *
+ *  @snippet test_fsm.c test_fsm_start_stop
+ *
+ *  @snippet test_fsm.c test_fsm_memory_persistence
+ *
  *
  *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of his usage
  *  @note The fsm_delete_pointer(fsm_pointer*) function help you to free the pointer correctly

@@ -103,7 +103,7 @@ void test_fsm_rand_transition(void **state){
     fsm_delete_all_steps();
 }
 
-void test_fsm_passing_value_by_step(void **step){
+void test_fsm_passing_value_by_step(void **state){
     struct fsm_pointer *fsm = fsm_create_pointer();
     int value = 5;
     struct fsm_step *step_0 = fsm_create_step(callback_set_int_from_step_to_42, (void *) &value);
@@ -114,7 +114,7 @@ void test_fsm_passing_value_by_step(void **step){
     assert_int_equal(value, 42);
 }
 
-void test_fsm_passing_value_by_event(void **step){
+void test_fsm_passing_value_by_event(void **state){
     struct fsm_pointer *fsm = fsm_create_pointer();
     int value = 42;
     struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
