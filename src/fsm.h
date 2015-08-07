@@ -14,9 +14,14 @@
 
 #include <sys/time.h>
 
-#include "events.h"
 #include "pthread.h"
 #include "fsm_queue.h"
+
+
+#define MAX_EVENT_UID_LEN 65
+#define _EVENT_STOP_POINTER_UID "__STOP_POINTER"
+#define _EVENT_DIRECT_TRANSITION "__DIRECT"
+#define _EVENT_START_POINTER_UID "__START_POINTER"
 
 #define FSM_STATE_STOPPED  0
 #define FSM_STATE_RUNNING  1
