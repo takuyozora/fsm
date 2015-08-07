@@ -99,7 +99,7 @@ void *fsm_pointer_loop(void *_pointer) {
  *  @note fsm_queue transitions from the step is also delete
  * */
 void _fsm_delete_a_step(fsm_step *step){
-    fsm_queue_cleanup(step->transitions);
+    fsm_queue_delete_queue_pointer(step->transitions);
     free(step);
 }
 
