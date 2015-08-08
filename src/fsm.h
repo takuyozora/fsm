@@ -97,10 +97,8 @@ typedef struct fsm_context fsm_context;
  *
  *  @return Pointer to the new created fsm_pointer
  *
+ *  Example :
  *  @snippet test_fsm.c test_fsm_start_stop
- *
- *  @snippet test_fsm.c test_fsm_memory_persistence
- *
  *
  *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of his usage
  *  @note The fsm_delete_pointer(fsm_pointer*) function help you to free the pointer correctly
