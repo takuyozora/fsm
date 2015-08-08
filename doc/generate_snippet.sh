@@ -1,13 +1,12 @@
 #!/bin/bash
+# Auto generate snippet from a test file given in parameter
 
 CURRENT_FUNCTION_NAME=""
-CURRENT_FUNCTION_OPEN=0
+N_OPEN=0
 SNIPPING=0
-#ALREADY_SNIPPED=0
-
-cd "`dirname "$1"`"
 TARGET="snippet/""`basename "$1"`"
 
+cd "`dirname "$1"`"
 mkdir -p snippet
 touch "$TARGET"
 
@@ -22,24 +21,24 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
             echo "//! [$CURRENT_FUNCTION_NAME]" >> "$TARGET"
         fi
     fi;
-    countopen=${line//[^\{]/}
-    countclose=${line//[^\}]/}
     if [[ "$line" == *"{"* ]]; then
-    let "CURRENT_FUNCTION_OPEN+=${#countopen}" # Add number of open
+        countopen=${line//[^\{]/}
+        let "N_OPEN+=${#countopen}" # Add number of open
     fi
     if [[ "$line" == *"}"* ]]; then
-    let "CURRENT_FUNCTION_OPEN-=${#countclose}" # Add number of close
+        countclose=${line//[^\}]/}
+        let "N_OPEN-=${#countclose}" # Add number of close
     fi
-    if [[ "$line" != *"assert"*  ]]; then #.*?"assert".*?"(".*?")".*
-        echo "$line" >> "$TARGET"
-    else
-        echo "${line/assert/// assert}" >> "$TARGET"
-    fi
-    if [ $CURRENT_FUNCTION_OPEN -eq 0 ] && [ $SNIPPING -eq 1 ]; then
+    #    if [[ "$line" != *"assert"*  ]]; then #.*?"assert".*?"(".*?")".*
+    #        echo "$line" >> "$TARGET"
+    #    else
+    #        echo "${line/assert/// assert}" >> "$TARGET"
+    #    fi
+    echo "$line" >> "$TARGET"
+    if [ $N_OPEN -eq 0 ] && [ $SNIPPING -eq 1 ]; then
         echo "//! [$CURRENT_FUNCTION_NAME]" >> "$TARGET"
         SNIPPING=0
     fi
 done < "$1"
-
 
 exit 0
