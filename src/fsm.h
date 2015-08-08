@@ -273,6 +273,8 @@ void fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *
  *
  *  @note Direclty return 0 if the fsm_pointer already is in the given fsm_step
  *
+ *  @note Using a monotonic clock to avoid problem if something change system time
+ *
  *  @see fsm_wait_step_blocking(fsm_pointer*,fsm_step*)
  *  @see fsm_wait_leaving_step_blocking(fsm_pointer*,fsm_step*)
  *  @see fsm_wait_leaving_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
@@ -312,6 +314,8 @@ void fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step
  *  @retval ETIMEDOUT if the step is not leaved in the given time
  *
  *  @note Direclty return 0 if the fsm_pointer already isn't in the given fsm_step
+ *
+ *  @note Using a monotonic clock to avoid problem if something change system time
  *
  *  @see fsm_wait_step_mstimeout(fsm_pointer*,fsm_step*,unsigned int)
  *  @see fsm_wait_step_blocking(fsm_pointer*,fsm_step*)
