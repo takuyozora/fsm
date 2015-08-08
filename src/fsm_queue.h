@@ -78,7 +78,7 @@ void *fsm_queue_push_back(struct fsm_queue *queue, void *_value, const unsigned 
 void *fsm_queue_push_back_more(struct fsm_queue *queue, void *_value,
                                const unsigned short size, unsigned short copy);
 
-/* Pop an element from the tail of the queue and return a generic pointer to it
+/*! Pop an element from the tail of the queue and return a generic pointer to it
  *      @param Pointer to the fsm_queue
  *
  * @retval Generic void pointer to the popped element
