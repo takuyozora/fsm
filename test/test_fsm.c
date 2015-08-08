@@ -13,7 +13,7 @@
 
 
 #include "fsm.h"
-#define NDEBUG
+//#define NDEBUG
 #include "debug.h"
 
 #define MAX_INCREMENT_CALLBACK 100000

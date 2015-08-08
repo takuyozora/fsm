@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "fsm.h"
 #include "debug.h"
@@ -214,19 +215,42 @@ void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_ui
     _fsm_push_back_transition_queue(from->transitions, &transition);
 }
 
-
 struct fsm_pointer *fsm_create_pointer()
 {
+    struct fsm_config_pointer default_config = {
+        .ttl_activated = false,
+    };
+    return fsm_create_pointer_config(default_config);
+}
+
+struct fsm_pointer *fsm_create_pointer_config(struct fsm_config_pointer config) {
     struct fsm_pointer *pointer = malloc(sizeof(struct fsm_pointer));
     pointer->thread = 0;
     // Init thread mutex and condition
     pthread_mutex_init(&pointer->mutex, NULL);
-    pthread_cond_init(&pointer->cond_event, NULL);
+    pthread_condattr_t attr;
+
+    pthread_condattr_init(&attr);
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "CannotResolve"
+    check(pthread_condattr_setclock(&attr, CLOCK_MONOTONIC), "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT");
+#pragma clang diagnostic pop
+    pthread_cond_init(&pointer->cond_event, &attr);
     //
+    pointer->config = config;
     pointer->input_event = create_fsm_queue();
+    if(config.ttl_activated){
+        pointer->ttl_event = create_fsm_queue_pointer();
+    }else{
+        pointer->ttl_event = NULL;
+    }
     pointer->current_step = NULL;
     pointer->running = FSM_STATE_STOPPED;
     return pointer;
+
+    error:
+    log_err("CRITICAL MONOTONIC ISSUE");
+    exit(1);
 }
 
 
@@ -288,7 +312,7 @@ void fsm_join_pointer(struct fsm_pointer *pointer) {
     if(pointer->running == FSM_STATE_RUNNING) {
         // Add signal to close in the pointer input_event queue
         fsm_signal_pointer_of_event(pointer, fsm_generate_event(_EVENT_STOP_POINTER_UID, NULL));
-        // Set pointer running step to closing in case the pointer do not whatch his transitions (because of a direct loop for example)
+        // Set pointer running step to closing in case the pointer do not watch his transitions (because of a direct loop for example)
         pointer->running = FSM_STATE_CLOSING;
         pthread_mutex_unlock(&pointer->mutex);
         pthread_join(pointer->thread, NULL);
@@ -296,6 +320,9 @@ void fsm_join_pointer(struct fsm_pointer *pointer) {
         pointer->running = FSM_STATE_STOPPED;
     }
     fsm_queue_cleanup(&pointer->input_event);
+    if (pointer->ttl_event != NULL){
+        fsm_queue_cleanup(&pointer->input_event);
+    }
     pthread_mutex_unlock(&pointer->mutex);
 }
 
@@ -310,7 +337,7 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
     // Creating correct time variable for an absolute time from the given time in ms
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "CannotResolve"
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 #pragma clang diagnostic pop
     ts.tv_sec += mstimeout / 1000;
     ts.tv_nsec += 1000 * 1000 * (mstimeout % 1000);
@@ -362,3 +389,4 @@ void fsm_delete_a_step(fsm_step *step) {
         _fsm_delete_a_step(step);
     }
 }
+

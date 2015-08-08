@@ -38,14 +38,21 @@
 
 
 #include <time.h>
+#include <stdbool.h>
 
 #include "pthread.h"
 #include "fsm_queue.h"
 
-#ifndef CLOCK_MONOTONIC_RAW
+//#ifndef CLOCK_MONOTONIC_RAW
+//// WARNING !! This should have been defined
+//#define CLOCK_MONOTONIC_RAW 4
+//#endif
+
+#ifndef CLOCK_MONOTONIC
 // WARNING !! This should have been defined
-#define CLOCK_MONOTONIC_RAW 4
+#define CLOCK_MONOTONIC 1
 #endif
+
 
 
 #define MAX_EVENT_UID_LEN 65
@@ -82,11 +89,17 @@ struct fsm_step{
     struct fsm_queue * transitions;
 };
 
+struct fsm_config_pointer {
+    bool ttl_activated;
+};
+
 struct fsm_pointer{
     pthread_t thread;
     pthread_mutex_t mutex;
     pthread_cond_t cond_event;
+    struct fsm_config_pointer config;
     struct fsm_queue input_event;
+    struct fsm_queue * ttl_event;
     struct fsm_step * current_step;
     unsigned short running;
 };
@@ -108,8 +121,23 @@ typedef struct fsm_context fsm_context;
  *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of his usage
  *  @note The fsm_delete_pointer(fsm_pointer*) function help you to free the pointer correctly
  *
+ *  @see fsm_create_pointer_config(struct fsm_config_pointer);
+ *
  */
 struct fsm_pointer *fsm_create_pointer();
+
+/*! Create a pointer with a custom configuration. Don't start it, just init variables
+ *      @param config fsm_config_pointer which hold custom configuration wanted for this fsm_pointer
+ *
+ *  @return Pointer to the new created fsm_pointer
+ *
+ *  @note It uses \c malloc for the fsm_pointer allocation : you should free it at the end of his usage
+ *  @note The fsm_delete_pointer(fsm_pointer*) function help you to free the pointer correctly
+ *
+ *  @see fsm_create_pointer();
+ *
+ *  */
+struct fsm_pointer *fsm_create_pointer_config(struct fsm_config_pointer config);
 
 /*! Start the given pointer at the given step in a separated thread
  *      @param _pointer Pointer to the fsm_pointer to start
