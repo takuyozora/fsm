@@ -138,21 +138,26 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
  */
 void *fsm_pointer_loop(void *_pointer) {
     struct fsm_pointer * pointer = _pointer;
+    // First event is the starting one, gave to the first step
     struct fsm_event * new_event = fsm_generate_event(_EVENT_START_POINTER_UID, NULL);
-    struct fsm_step * ret_step = fsm_start_step(pointer, pointer->current_step, new_event); // Allow to start the first step without transition
+    // Allow to start the first step without transition
+    struct fsm_step * ret_step = fsm_start_step(pointer, pointer->current_step, new_event);
+    // Now the pointer is running
     struct fsm_transition * reachable_transition = NULL;
     while (1){
         if(pointer->running != FSM_STATE_RUNNING){
+            // If the pointer is asked to stopped (closing) it immediately free resources and stop
             free(new_event);
             break;
         }
         if(ret_step != NULL){
+            // If a step have return a step it directly jump to it
             ret_step = fsm_start_step(pointer, ret_step, new_event);
             continue;
         }
-        if(pointer->current_step->transitions->first != NULL){ // Check if there isn't direct transition
-            if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid,
-                      _EVENT_DIRECT_TRANSITION) == 0){
+        if(pointer->current_step->transitions->first != NULL){
+            // Check if there isn't a direct transition to perform
+            if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid, _EVENT_DIRECT_TRANSITION) == 0){
                 // Then we direct go to next step
                 ret_step = fsm_start_step(pointer, ((struct fsm_transition *)
                         (pointer->current_step->transitions->first->value))->next_step, new_event);
@@ -162,17 +167,19 @@ void *fsm_pointer_loop(void *_pointer) {
         free(new_event);
         new_event = _fsm_get_event_or_wait(&pointer->input_event);
         if (new_event != NULL){
-            //debug("Get event uid : %d", new_event->uid);
             if (strcmp(new_event->uid, _EVENT_STOP_POINTER_UID) == 0){
+                // If the closing event have been given to the pointer it close and free his resources
                 free(new_event);
                 break;
             }
-            reachable_transition = _fsm_get_reachable_condition(
-                    pointer->current_step->transitions, new_event);
+            // Search a transition which could be triggered by the new_event
+            reachable_transition = _fsm_get_reachable_condition(pointer->current_step->transitions, new_event);
             if (reachable_transition != NULL){
+                // If there is one pointer jump to it and continue the loop
                 ret_step = fsm_start_step(pointer, reachable_transition->next_step, new_event);
                 continue;
             }
+            // Otherwise it will wait for a new event
         }
         // Condition
     }
