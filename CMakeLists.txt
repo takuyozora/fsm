@@ -7,4 +7,7 @@ add_subdirectory(test)
 add_subdirectory(src)
 set(SOURCE_FILES main.c)
 
-add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/fsm_queue.c  src/debug.h)
+#include_directories(/usr/include/linux/)
+
+
+add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/fsm_queue.c  src/debug.h /usr/include/time.h)

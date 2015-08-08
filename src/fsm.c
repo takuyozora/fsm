@@ -3,8 +3,9 @@
 //
 
 #include <stdlib.h>
+#include <time.h>
+
 #include "fsm.h"
-#include "stdio.h"
 #include "debug.h"
 
 // Global var to keep a trace of all steps created in order to free them at the end
@@ -303,14 +304,16 @@ void *fsm_null_callback(struct fsm_context *context) {
 }
 
 int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout, char leave) {
-    struct timeval tv;
     struct timespec ts;
     int rc = 0;
 
     // Creating correct time variable for an absolute time from the given time in ms
-    gettimeofday(&tv, NULL);
-    ts.tv_sec = time(NULL) + mstimeout / 1000;
-    ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (mstimeout % 1000);
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "CannotResolve"
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+#pragma clang diagnostic pop
+    ts.tv_sec += mstimeout / 1000;
+    ts.tv_nsec += 1000 * 1000 * (mstimeout % 1000);
     ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
     ts.tv_nsec %= (1000 * 1000 * 1000);
 

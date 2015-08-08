@@ -36,10 +36,16 @@
  * @endcode
  * */
 
-#include <sys/time.h>
+
+#include <time.h>
 
 #include "pthread.h"
 #include "fsm_queue.h"
+
+#ifndef CLOCK_MONOTONIC_RAW
+// WARNING !! This should have been defined
+#define CLOCK_MONOTONIC_RAW 4
+#endif
 
 
 #define MAX_EVENT_UID_LEN 65
