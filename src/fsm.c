@@ -4,13 +4,96 @@
 
 #include <stdlib.h>
 #include "fsm.h"
-#include "fsm_event_queue.h"
-#include "fsm_transition_queue.h"
 #include "stdio.h"
 #include "debug.h"
 
 // Global var to keep a trace of all steps created in order to free them at the end
 static struct fsm_queue *_all_steps_created = NULL;
+
+/*! Wrapper for fsm_pop_front_queue that return an fsm_event
+ *      @param queue Pointer to the fsm_queue
+ *
+ *  @retval NULL if the fsm_queue is empty
+ *  @retval an fsm_queue pointer otherwise.
+ *
+ *  @note You should free the fsm_event after usage
+ *
+ *  @see fsm_pop_front_queue(fsm_queue*)
+ *  */
+struct fsm_event *_fsm_pop_front_event_queue(struct fsm_queue *queue){
+    return (struct fsm_event *) fsm_queue_pop_front(queue);
+}
+
+/*! Wrapper for fsm_push_back_queue that store a fsm_event
+ *      @param queue Pointer to the fsm_queue
+ *      @param event Pointer to the fsm_event to store
+ *
+ *  @note Assume that the event is in the heap so it do not copy it
+ *
+ *  @see fsm_push_back_queue(fsm_queue*, void*)
+ *  */
+void _fsm_push_back_event_queue(struct fsm_queue *queue, struct fsm_event *event) {
+    (struct fsm_event *) fsm_queue_push_back_more(queue, (void *) event, sizeof(event), 0);
+}
+
+/*! Return the older event from a fsm_queue or block until a new one appeared
+ *      @param queue Pointer to the fsm_queue
+ *
+ *  @return A pointer to the older fsm_event stored into the queue.
+ *
+ *  @note You should free the fsm_event after usage
+ *
+ *  */
+struct fsm_event *_fsm_get_event_or_wait(struct fsm_queue *queue) {
+    pthread_mutex_lock(&queue->mutex);
+    while(queue->first == NULL) {
+        pthread_cond_wait(&queue->cond, &queue->mutex);
+    }
+    pthread_mutex_unlock(&queue->mutex);
+    return _fsm_pop_front_event_queue(queue);
+}
+
+/*! Wrapper for fsm_push_back_queue that store a fsm_transition
+ *      @param queue Pointer to the fsm_queue
+ *      @param transition Pointer to the fsm_transition to store
+ *
+ *  @return Pointer to the stored fsm_transition which have been copied into the heap
+ *
+ *  @see fsm_push_back_queue(fsm_queue*, void*)
+ *  */
+struct fsm_transition *_fsm_push_back_transition_queue(struct fsm_queue *queue,
+                                                       struct fsm_transition *transition) {
+    return (struct fsm_transition *) fsm_queue_push_back(queue, (void *) transition,
+                                                         sizeof(*transition));
+}
+
+/*! Search in all fsm_queue if there is any transition which can be triggered by the given fsm_event
+ *      @param queue Pointer to the fsm_queue to search in
+ *      @param event Pointer to the fsm_event which could trigger a transition
+ *
+ *  @retval NULL if there is no transition to reach
+ *  @retval The first fsm_transition which is triggered by the given fsm_event
+ *
+ *  @note The fsm_queue is unchanged
+ *
+ *  @see fsm_signal_pointer_of_event(fsm_pointer*, fsm_event*)
+ *
+ *  */
+struct fsm_transition *_fsm_get_reachable_condition(struct fsm_queue *queue,
+                                                    struct fsm_event *event) {
+    pthread_mutex_lock(&queue->mutex);
+    struct fsm_queue_elem *cursor = queue->first;
+    while (cursor != NULL){
+        //debug("Compare %s with %s", ((struct fsm_transition *)(cursor->value))->event_uid, event->uid);
+        if(strcmp(((struct fsm_transition *)(cursor->value))->event_uid, event->uid) == 0){
+            pthread_mutex_unlock(&queue->mutex);
+            return ((struct fsm_transition *)(cursor->value));
+        }
+        cursor = cursor->next;
+    }
+    pthread_mutex_unlock(&queue->mutex);
+    return NULL;
+}
 
 
 /*! Start a step function with the appropriate context
@@ -75,14 +158,15 @@ void *fsm_pointer_loop(void *_pointer) {
             }
         }
         free(new_event);
-        new_event = get_event_or_wait(&pointer->input_event);
+        new_event = _fsm_get_event_or_wait(&pointer->input_event);
         if (new_event != NULL){
             //debug("Get event uid : %d", new_event->uid);
             if (strcmp(new_event->uid, _EVENT_STOP_POINTER_UID) == 0){
                 free(new_event);
                 break;
             }
-            reachable_transition = get_reachable_condition(pointer->current_step->transitions, new_event);
+            reachable_transition = _fsm_get_reachable_condition(
+                    pointer->current_step->transitions, new_event);
             if (reachable_transition != NULL){
                 ret_step = fsm_start_step(pointer, reachable_transition->next_step, new_event);
                 continue;
@@ -126,7 +210,7 @@ void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_ui
     // Copy the event's UID to the transition
     strcpy(transition.event_uid, event_uid);
     // Add transition to the from transition queue
-    push_back_fsm_transition_queue(from->transitions, &transition);
+    _fsm_push_back_transition_queue(from->transitions, &transition);
 }
 
 
@@ -165,7 +249,7 @@ unsigned short fsm_start_pointer(struct fsm_pointer *pointer, struct fsm_step *i
 
 
 void fsm_signal_pointer_of_event(struct fsm_pointer *pointer, struct fsm_event *event) {
-    push_back_fsm_event_queue(&pointer->input_event, event);
+    _fsm_push_back_event_queue(&pointer->input_event, event);
 }
 
 void fsm_delete_pointer(struct fsm_pointer *pointer) {

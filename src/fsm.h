@@ -53,7 +53,6 @@
 #define FSM_STATE_CLOSING  3
 
 #define FSM_ERR_NOT_STOPPED 1
-//#define FSM_ERR_NULL_POINTER 2
 
 struct fsm_event
 {
