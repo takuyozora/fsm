@@ -39,20 +39,11 @@
 
 #include <time.h>
 #include <stdbool.h>
+#include <bits/time.h>
 
 #include "pthread.h"
+#include "fsm_time.h"
 #include "fsm_queue.h"
-
-//#ifndef CLOCK_MONOTONIC_RAW
-//// WARNING !! This should have been defined
-//#define CLOCK_MONOTONIC_RAW 4
-//#endif
-
-#ifndef CLOCK_MONOTONIC
-// WARNING !! This should have been defined
-#define CLOCK_MONOTONIC 1
-#endif
-
 
 
 #define MAX_EVENT_UID_LEN 65

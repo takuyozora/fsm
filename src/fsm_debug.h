@@ -7,11 +7,10 @@
 #include <errno.h>
 #include <string.h>
 
-#define DBG_EXE
-#ifdef NDEBUG
-#define debug(M, ...)
-#else
+#ifdef DBG_VERBOSE
 #define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILENAME__, __LINE__, ##__VA_ARGS__)
+#else
+#define debug(M, ...)
 #endif
 
 #define clean_errno() (errno == 0 ? "None" : strerror(errno))
@@ -34,6 +33,12 @@
 #define dbg_exe(M) M
 #else
 #define dbg_exe(M)
+#endif
+
+#ifdef DBG_TEST_EXE
+#define dbg_test_exe(M) M
+#else
+#define dbg_test_exe(M)
 #endif
 
 #define dbg_check(A, M, ...) dbg_exe(check(A, M, ##__VA_ARGS__))

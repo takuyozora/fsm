@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 #include "fsm_queue.h"
-#include "debug.h"
+#include "fsm_debug.h"
 
 void test_queue_push_pop_order(void **state){
     struct fsm_queue queue = create_fsm_queue();

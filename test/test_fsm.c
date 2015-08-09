@@ -14,7 +14,7 @@
 
 #include "fsm.h"
 //#define NDEBUG
-#include "debug.h"
+#include "fsm_debug.h"
 
 #define MAX_INCREMENT_CALLBACK 100000
 
@@ -200,12 +200,12 @@ void test_fsm_memory_persistence(void **state){
     struct fsm_step *step_1 = fsm_create_step(callback_create_fsm, (void *) &data);
     fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
     fsm_start_pointer(fsm_base, step_0);
-    assert_int_equal(fsm_wait_step_mstimeout(fsm_base, step_1, 250), 0);
+    fsm_wait_step_blocking(fsm_base, step_1);
     fsm_join_pointer(fsm_base);
     fsm_delete_pointer(fsm_base);
     struct fsm_step *step_0_dyn = fsm_dyn->current_step;
     fsm_signal_pointer_of_event(fsm_dyn, fsm_generate_event("GO", NULL));
-    assert_int_equal(fsm_wait_leaving_step_mstimeout(fsm_dyn, step_0_dyn, 250), 0);
+    fsm_wait_leaving_step_blocking(fsm_dyn, step_0_dyn);
     fsm_join_pointer(fsm_dyn);
     assert_int_equal(value, 42);
     fsm_delete_pointer(fsm_dyn);

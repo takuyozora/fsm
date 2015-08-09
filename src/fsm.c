@@ -7,7 +7,7 @@
 #include <pthread.h>
 
 #include "fsm.h"
-#include "debug.h"
+#include "fsm_debug.h"
 
 // Global var to keep a trace of all steps created in order to free them at the end
 static struct fsm_queue *_all_steps_created = NULL;
@@ -240,7 +240,7 @@ struct fsm_pointer *fsm_create_pointer_config(struct fsm_config_pointer config) 
     pthread_condattr_init(&attr);
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "CannotResolve"
-    check(pthread_condattr_setclock(&attr, CLOCK_MONOTONIC), "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT");
+    check(pthread_condattr_setclock(&attr, CLOCK_BOOTTIME), "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT");
 #pragma clang diagnostic pop
     pthread_cond_init(&pointer->cond_event, &attr);
     //
@@ -338,18 +338,8 @@ void *fsm_null_callback(struct fsm_context *context) {
 }
 
 int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout, char leave) {
-    struct timespec ts;
+    struct timespec ts = fsm_time_get_abs_fixed_time_from_us(mstimeout*1000);
     int rc = 0;
-
-    // Creating correct time variable for an absolute time from the given time in ms
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "CannotResolve"
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-#pragma clang diagnostic pop
-    ts.tv_sec += mstimeout / 1000;
-    ts.tv_nsec += 1000 * 1000 * (mstimeout % 1000);
-    ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
-    ts.tv_nsec %= (1000 * 1000 * 1000);
 
     pthread_mutex_lock(&pointer->mutex);
     // Wait that the given step become the current one or the opposite according to the leave value
