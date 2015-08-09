@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <string.h>
 
+#define DBG_EXE
 #ifdef NDEBUG
 #define debug(M, ...)
 #else
@@ -28,5 +29,14 @@
 #define check_mem(A) check((A), "Out of memory.")
 
 #define check_debug(A, M, ...) if(!(A)) { debug(M, ##__VA_ARGS__); errno=0; goto error; }
+
+#ifdef DBG_EXE
+#define dbg_exe(M) M
+#else
+#define dbg_exe(M)
+#endif
+
+#define dbg_check(A, M, ...) dbg_exe(check(A, M, ##__VA_ARGS__))
+
 
 #endif
