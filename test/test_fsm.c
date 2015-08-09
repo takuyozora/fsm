@@ -212,6 +212,46 @@ void test_fsm_memory_persistence(void **state){
     fsm_delete_all_steps();
 }
 
+void test_fsm_ttl(void **state){
+    struct fsm_pointer *fsm = fsm_create_pointer();
+    struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
+
+    fsm_connect_step(step_0, step_1, "GO");
+    fsm_connect_step(step_1, step_2, "NEXT");
+
+    fsm_start_pointer(fsm, step_0);
+
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("NEXT", NULL));
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", NULL));
+
+    assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, INT_MAX), 0);
+
+    fsm_join_pointer(fsm);
+    fsm_delete_pointer(fsm);
+
+    struct fsm_config_pointer config = {
+        .ttl_activated = true,
+    };
+    fsm = fsm_create_pointer_config(config);
+
+    fsm_start_pointer(fsm, step_0);
+
+    fsm_event *ttl_event = fsm_generate_event("NEXT", NULL);
+    ttl_event->ttl = fsm_time_get_abs_fixed_time_from_us(INT_MAX);
+
+    fsm_signal_pointer_of_event(fsm, ttl_event);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", NULL));
+
+    fsm_wait_step_blocking(fsm, step_2);
+
+    fsm_join_pointer(fsm);
+    fsm_delete_pointer(fsm);
+
+    fsm_delete_all_steps();
+}
+
 
 int main(void)
 {
@@ -224,6 +264,7 @@ int main(void)
             cmocka_unit_test(test_fsm_change_step_by_callback_return),
             cmocka_unit_test(test_fsm_direct_transition),
             cmocka_unit_test(test_fsm_memory_persistence),
+            cmocka_unit_test(test_fsm_ttl),
     };
 
     int rc = cmocka_run_group_tests(tests, NULL, NULL);

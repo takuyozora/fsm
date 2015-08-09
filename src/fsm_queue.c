@@ -52,8 +52,7 @@ void *fsm_queue_push_back_more(
     return elem->value;
 }
 
-void *fsm_queue_push_back(
-        struct fsm_queue *queue, void *_value, const unsigned short size) {
+void *fsm_queue_push_back(struct fsm_queue *queue, void *_value, const unsigned short size) {
     return fsm_queue_push_back_more(queue, _value, size, 1);
 }
 
@@ -130,4 +129,36 @@ void *fsm_queue_get_elem(struct fsm_queue *queue, void *elem) {
     }
     pthread_mutex_unlock(&queue->mutex);
     return NULL;
+}
+
+void *fsm_queue_push_top_more(struct fsm_queue *queue, void *_value, const unsigned short size, unsigned short copy) {
+    // Alocate memory for the new fsm_queue_elem
+    struct fsm_queue_elem * elem = malloc(sizeof(struct fsm_queue_elem));
+    if (copy) {
+        // Allocate memory into the heap for the given pointer
+        elem->value = malloc(size);
+        // Copy memory
+        memcpy(elem->value, _value, size);
+    }else{
+        // Just store the pointer
+        elem->value = _value;
+    }
+    elem->prev = NULL; // It's the fisrt elem
+    pthread_mutex_lock(&queue->mutex);
+    elem->next = queue->first; // Before it, is the old first elem
+    if (elem->next != NULL) {
+        // If there was someone before, make it know that it isn't the first anymore
+        elem->next->prev = elem;
+    }else{
+        // If not we also are the last elem
+        queue->last = elem;
+    }
+    queue->first = elem; // Tell the queue that we are the new last elem
+    pthread_cond_broadcast(&queue->cond); // Signal a change into the queue
+    pthread_mutex_unlock(&queue->mutex);
+    return elem->value;
+}
+
+void *fsm_queue_push_top(struct fsm_queue *queue, void *_value, const unsigned short size) {
+    return fsm_queue_push_top_more(queue, _value, size, 1);
 }

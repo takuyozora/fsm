@@ -46,13 +46,16 @@ void _fsm_push_back_event_queue(struct fsm_queue *queue, struct fsm_event *event
  *  @note You should free the fsm_event after usage
  *
  *  */
-struct fsm_event *_fsm_get_event_or_wait(struct fsm_queue *queue) {
-    pthread_mutex_lock(&queue->mutex);
-    while(queue->first == NULL) {
-        pthread_cond_wait(&queue->cond, &queue->mutex);
+struct fsm_event *_fsm_get_event_or_wait(struct fsm_pointer *pointer) {
+//    if (pointer->config.ttl_activated && pointer->ttl_event->first != NULL){
+//        return _fsm_pop_front_event_queue(pointer->ttl_event);
+//    }
+    pthread_mutex_lock(&pointer->input_event.mutex);
+    while(pointer->input_event.first == NULL) {
+        pthread_cond_wait(&pointer->input_event.cond, &pointer->input_event.mutex);
     }
-    pthread_mutex_unlock(&queue->mutex);
-    return _fsm_pop_front_event_queue(queue);
+    pthread_mutex_unlock(&pointer->input_event.mutex);
+    return _fsm_pop_front_event_queue(&pointer->input_event);
 }
 
 /*! Wrapper for fsm_push_back_queue that store a fsm_transition
@@ -123,6 +126,11 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
     }
     pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
+    if(pointer->config.ttl_activated){
+        while (pointer->ttl_event->first != NULL){
+            fsm_queue_push_top_more(&pointer->input_event, fsm_queue_pop_front(pointer->ttl_event), sizeof(fsm_event), 0);
+        }
+    }
     return step->fnct(&init_context);
 }
 
@@ -165,7 +173,7 @@ void *fsm_pointer_loop(void *_pointer) {
             }
         }
         free(new_event);
-        new_event = _fsm_get_event_or_wait(&pointer->input_event);
+        new_event = _fsm_get_event_or_wait(pointer);
         if (new_event != NULL){
             if (strcmp(new_event->uid, _EVENT_STOP_POINTER_UID) == 0){
                 // If the closing event have been given to the pointer it close and free his resources
@@ -178,6 +186,12 @@ void *fsm_pointer_loop(void *_pointer) {
                 // If there is one pointer jump to it and continue the loop
                 ret_step = fsm_start_step(pointer, reachable_transition->next_step, new_event);
                 continue;
+            }
+            if (pointer->config.ttl_activated && fsm_time_check_absolute_time(new_event->ttl)){
+                // There is a TTL so don't delete it right now
+                debug("TTL event : %d s %d ns", new_event->ttl.tv_sec, new_event->ttl.tv_nsec);
+                _fsm_push_back_event_queue(pointer->ttl_event, new_event);
+                new_event = NULL; // To protect new_event to be free
             }
             // Otherwise it will wait for a new event
         }
@@ -328,7 +342,9 @@ void fsm_join_pointer(struct fsm_pointer *pointer) {
     }
     fsm_queue_cleanup(&pointer->input_event);
     if (pointer->ttl_event != NULL){
-        fsm_queue_cleanup(&pointer->input_event);
+        fsm_queue_cleanup(pointer->ttl_event);
+        free(pointer->ttl_event);
+        pointer->ttl_event = NULL;
     }
     pthread_mutex_unlock(&pointer->mutex);
 }

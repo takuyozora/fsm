@@ -61,6 +61,7 @@
 struct fsm_event
 {
     char uid[MAX_EVENT_UID_LEN];
+    struct timespec ttl;
     void * args;
 };
 
