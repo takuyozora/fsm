@@ -71,8 +71,8 @@ void benchmark_fsm_direct_transitions(void **state){
     fsm_join_pointer(fsm);
     double diff_time = bm_get_clock() - start_time;
 
-    log_info("Benchmark for %u step transition : %f s", MAX_INCREMENT_CALLBACK, diff_time);
-    log_info("Benchmark for 1 step transition : ~%f ns", diff_time*1000000000/MAX_INCREMENT_CALLBACK);
+    log_info("Benchmark for %u direct step transition : %f s", MAX_INCREMENT_CALLBACK, diff_time);
+    log_info("Benchmark for 1 direct step transition : ~%f ns", diff_time*1000000000/MAX_INCREMENT_CALLBACK);
 
     fsm_join_pointer(fsm);
     fsm_delete_pointer(fsm);

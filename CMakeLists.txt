@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 project(fsm)
 enable_testing()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -Wno-unused-variable  -lpthread -D_REENTRANT -std=gnu11")#-std=c11 ")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -Wno-unused-variable  -lpthread -D_REENTRANT -std=gnu11 ") #-O2")#-std=c11 ")
 add_subdirectory(test)
 add_subdirectory(src)
 set(SOURCE_FILES main.c)
