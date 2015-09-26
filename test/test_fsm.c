@@ -261,22 +261,48 @@ void test_fsm_out_action(void **state){
     struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
     fsm_connect_step(step_0, step_1, "STEP1");
     fsm_connect_step(step_0, step_2, "STEP2");
-    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
-    fsm_connect_step(step_2, step_0, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_1, step_0, "STEP0");
+    fsm_connect_step(step_2, step_0, "STEP0");
     fsm_start_pointer(fsm, step_0);
     assert_int_equal(value, 0);
     fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP1", NULL));
-    fsm_wait_step_mstimeout(fsm,step_1,3000);
+    assert_int_equal(fsm_wait_step_mstimeout(fsm,step_1,500), 0);
     assert_int_equal(value, 42);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP0", NULL));
     value = 1;
     assert_int_equal(value, 1);
     fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP2", NULL));
-    fsm_wait_step_mstimeout(fsm,step_2,3000);
+    assert_int_equal(fsm_wait_step_mstimeout(fsm,step_2,500), 0);
     assert_int_equal(value, 42);
     fsm_join_pointer(fsm);
     fsm_delete_pointer(fsm);
     fsm_delete_all_steps();
 }
+
+void test_fsm_simple_timeout(void **state){
+    struct fsm_pointer *fsm = fsm_create_pointer();
+    struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
+    fsm_connect_step(step_0, step_1, "STEP1");
+    fsm_connect_step(step_0, step_2, _EVENT_TIMEOUT);
+    fsm_connect_step(step_1, step_0, "STEP0");
+    fsm_connect_step(step_2, step_0, "STEP0");
+    fsm_set_timeout_to_step(step_0, 100000); // Wait 100ms
+    fsm_start_pointer(fsm, step_0);
+
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_2, 5000), ETIMEDOUT);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP0", NULL));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_2, 5000), ETIMEDOUT);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP0", NULL));
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP1", NULL));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_1, 5000), ETIMEDOUT);
+
+    fsm_join_pointer(fsm);
+    fsm_delete_pointer(fsm);
+    fsm_delete_all_steps();
+}
+
 
 
 int main(void)
@@ -292,6 +318,7 @@ int main(void)
             cmocka_unit_test(test_fsm_memory_persistence),
             cmocka_unit_test(test_fsm_ttl),
             cmocka_unit_test(test_fsm_out_action),
+            cmocka_unit_test(test_fsm_simple_timeout),
     };
 
     int rc = cmocka_run_group_tests(tests, NULL, NULL);

@@ -51,6 +51,7 @@
 #define _EVENT_DIRECT_TRANSITION "__DIRECT"
 #define _EVENT_START_POINTER_UID "__START_POINTER"
 #define _EVENT_OUT_ACTION_UID "__OUT_ACTION"
+#define _EVENT_TIMEOUT "__TIMEOUT"
 
 #define FSM_STATE_STOPPED  0
 #define FSM_STATE_RUNNING  1
@@ -84,6 +85,8 @@ struct fsm_step{
     struct fsm_queue * transitions;
     void * (*out_fnct)(struct fsm_context *);
     void * out_args;
+    struct timespec timeout;
+    int timeout_us;
 };
 
 struct fsm_config_pointer {
@@ -319,6 +322,14 @@ void fsm_wait_leaving_step_blocking(struct fsm_pointer *pointer, struct fsm_step
  *  @see fsm_wait_leaving_step_blocking(fsm_pointer*,fsm_step*)
  *  */
 int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step, unsigned int mstimeout);
+
+/*! Set a timeout to the given step in microseconds
+ *      @param step Pointer to the step
+ *      @param timeout_us Timeout in microseconds
+ *
+ *  If there is no transition after the given timeout an _EVENT_TIMEOUT will be put in the event queue
+ */
+void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us);
 
 /*! Useless function which return a NULL pointer to create wait steps
  *      @param context Pointer to the fsm_context in which one the function is called.

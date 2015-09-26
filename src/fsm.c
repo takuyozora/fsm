@@ -52,7 +52,15 @@ struct fsm_event *_fsm_get_event_or_wait(struct fsm_pointer *pointer) {
 //    }
     pthread_mutex_lock(&pointer->input_event.mutex);
     while(pointer->input_event.first == NULL) {
-        pthread_cond_wait(&pointer->input_event.cond, &pointer->input_event.mutex);
+        if (pointer->current_step->timeout_us == 0) {
+            pthread_cond_wait(&pointer->input_event.cond, &pointer->input_event.mutex);
+        }else{
+            if(pthread_cond_timedwait(&pointer->cond_event, &pointer->input_event.mutex, &pointer->current_step->timeout) == ETIMEDOUT){
+                // If no event occurs and timeout raised
+                pthread_mutex_unlock(&pointer->input_event.mutex);
+                return fsm_generate_event(_EVENT_TIMEOUT, NULL);
+            }
+        }
     }
     pthread_mutex_unlock(&pointer->input_event.mutex);
     return _fsm_pop_front_event_queue(&pointer->input_event);
@@ -120,7 +128,6 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
             .pointer = pointer,
     };
     pthread_mutex_lock(&pointer->mutex);
-    pointer->current_step = step;
     if(pointer->running == FSM_STATE_STARTING) {
         // If it's the first step to be run, FSM is now running
         pointer->running = FSM_STATE_RUNNING;
@@ -130,8 +137,13 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
                 .event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL),
                 .pointer = pointer,
         };
-        step->out_fnct(&out_action_context);
+        pointer->current_step->out_fnct(&out_action_context);
         free(out_action_context.event);
+    }
+    pointer->current_step = step;
+    if(pointer->current_step->timeout_us > 0){
+        // If there is a timeout, init it.
+        pointer->current_step->timeout = fsm_time_get_abs_fixed_time_from_us(pointer->current_step->timeout_us);
     }
     pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
@@ -233,6 +245,9 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
     step->transitions = create_fsm_queue_pointer();
     step->out_fnct = NULL;
     step->out_args = NULL;
+    step->timeout.tv_nsec = 0;
+    step->timeout.tv_sec = 0;
+    step->timeout_us = 0;
     return step;
 }
 
@@ -263,11 +278,11 @@ struct fsm_pointer *fsm_create_pointer_config(struct fsm_config_pointer config) 
     pthread_condattr_t attr;
 
     pthread_condattr_init(&attr);
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "CannotResolve"
-    check(pthread_condattr_setclock(&attr, CLOCK_BOOTTIME), "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT");
-#pragma clang diagnostic pop
-    pthread_cond_init(&pointer->cond_event, &attr);
+    int ret = 0;
+    ret = pthread_condattr_setclock(&attr, FSM_CLOCK_MONOTONIC_SOURCE);
+    check(ret == 0, "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT, error %d", ret);
+    ret = pthread_cond_init(&pointer->cond_event, &attr);
+    check(ret == 0, "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT, error %d", ret);
     //
     pointer->config = config;
     pointer->input_event = create_fsm_queue();
@@ -368,15 +383,15 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
     struct timespec ts = fsm_time_get_abs_fixed_time_from_us(mstimeout*1000);
     int rc = 0;
 
-    pthread_mutex_lock(&pointer->mutex);
+    pthread_mutex_lock(&pointer->input_event.mutex);
     // Wait that the given step become the current one or the opposite according to the leave value
     while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
-        rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->mutex, &ts);
+        rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->input_event.mutex, &ts);
         if (rc == ETIMEDOUT){
             break;
         }
     }
-    pthread_mutex_unlock(&pointer->mutex);
+    pthread_mutex_unlock(&pointer->input_event.mutex);
     return rc;
 }
 
@@ -414,3 +429,6 @@ void fsm_delete_a_step(fsm_step *step) {
     }
 }
 
+void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us) {
+    step->timeout_us = timeout_us;
+}

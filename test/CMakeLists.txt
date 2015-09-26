@@ -53,8 +53,8 @@ add_test(test_fsm_valgrind valgrind
             --track-origins=yes
             ./test_fsm)
 
-add_test(test_fsm_heaptrack ${PROJECT_SOURCE_DIR}/test/heaptrack.sh ${PROJECT_SOURCE_DIR}/build/test/test_fsm)
-add_test(test_fsm+_heaptrack ${PROJECT_SOURCE_DIR}/test/heaptrack.sh ${PROJECT_SOURCE_DIR}/build/test/test+_fsm)
+#add_test(test_fsm_heaptrack ${PROJECT_SOURCE_DIR}/test/heaptrack.sh ${PROJECT_SOURCE_DIR}/build/test/test_fsm)
+#add_test(test_fsm+_heaptrack ${PROJECT_SOURCE_DIR}/test/heaptrack.sh ${PROJECT_SOURCE_DIR}/build/test/test+_fsm)
 
 target_link_libraries(test_queue cmocka)
 target_link_libraries(test_time cmocka)

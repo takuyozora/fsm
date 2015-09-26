@@ -12,6 +12,7 @@
 
 #define FSM_TIME_NANO_SECONDE 1000000000
 #define FSM_TIME_MAX_INT_NANO_SECONDE INT_MAX / 1000000000
+#define FSM_CLOCK_MONOTONIC_SOURCE 1 // CLOCK_MONOTONIC_RAW
 
 struct timespec fsm_time_get_abs_fixed_time_from_us(int delta_us);
 

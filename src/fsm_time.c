@@ -15,17 +15,22 @@
 
 struct timespec fsm_time_get_abs_fixed_time_from_us(int delta_us) {
         struct timespec ts;
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "CannotResolve"
-        check(clock_gettime(CLOCK_BOOTTIME, &ts)==0, "CRITICAL : Impossible to get boot time : abort");
-#pragma clang diagnostic pop
+        check(clock_gettime(FSM_CLOCK_MONOTONIC_SOURCE, &ts)==0, "CRITICAL : Impossible to get boot time : abort");
+//        if(clock_gettime(CLOCK_BOOTTIME, &ts) != 0){
+//            log_warn("IMPORTANT : Impossible to get boot time : try with monotonic_raw");
+//            #ifdef DBG_TEST_EXE
+//            check(0, "Test stop here"); // No root : bug if clock_gettime is called a second time cause of mocka wrapper engine
+//            #endif
+//            check(clock_gettime(CLOCK_MONOTONIC_RAW, &ts)==0, "CRITICAL : Impossible to get monotonic_raw time : abort");
+//        }
         ts.tv_sec += delta_us / 1000000;
         ts.tv_nsec +=  1000 * ( delta_us % 1000 );
         ts.tv_sec += ts.tv_nsec / FSM_TIME_NANO_SECONDE;
         ts.tv_nsec %= FSM_TIME_NANO_SECONDE;
         return ts;
     error:
-        dbg_test_exe(ts.tv_nsec = 0; ts.tv_sec = 0; return ts;)
+        dbg_test_exe(ts.tv_nsec = 0; ts.tv_sec = 0;)
+        log_warn("fsm_time_get_abs_fixed_time_from_us return 0,0 because of test_exe ");
         //exit(-1);
         return ts;
 }
