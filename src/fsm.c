@@ -2,6 +2,8 @@
 // Created by olivier on 03/08/15.
 //
 
+//#define DBG_VERBOSE
+
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
@@ -92,8 +94,8 @@ struct fsm_transition *_fsm_push_back_transition_queue(struct fsm_queue *queue,
  *  @see fsm_signal_pointer_of_event(fsm_pointer*, fsm_event*)
  *
  *  */
-struct fsm_transition *_fsm_get_reachable_condition(struct fsm_queue *queue,
-                                                    struct fsm_event *event) {
+struct fsm_transition *_fsm_get_reachable_transition(struct fsm_queue *queue,
+                                                     struct fsm_event *event) {
     pthread_mutex_lock(&queue->mutex);
     struct fsm_queue_elem *cursor = queue->first;
     while (cursor != NULL){
@@ -108,6 +110,20 @@ struct fsm_transition *_fsm_get_reachable_condition(struct fsm_queue *queue,
     return NULL;
 }
 
+struct fsm_conditional_transition *_fsm_get_reachable_conditional_transition(struct fsm_queue *queue, struct fsm_event *event) {
+    pthread_mutex_lock(&queue->mutex);
+    struct fsm_queue_elem *cursor = queue->first;
+    while (cursor != NULL){
+        if(strcmp(((struct fsm_conditional_transition *)(cursor->value))->event_uid, event->uid) == 0){
+            debug("_fsm_get_reachable_conditional_transition : found transition %s, fnct %p", event->uid, ((struct fsm_conditional_transition *)(cursor->value))->fnct);
+            pthread_mutex_unlock(&queue->mutex);
+            return ((struct fsm_conditional_transition *)(cursor->value));
+        }
+        cursor = cursor->next;
+    }
+    pthread_mutex_unlock(&queue->mutex);
+    return NULL;
+}
 
 /*! Start a step function with the appropriate context
  *      @param pointer Pointer to the fsm_pointer entering to the given step
@@ -173,6 +189,11 @@ void *fsm_pointer_loop(void *_pointer) {
     struct fsm_step * ret_step = fsm_start_step(pointer, pointer->current_step, new_event);
     // Now the pointer is running
     struct fsm_transition * reachable_transition = NULL;
+    struct fsm_conditional_transition * reachable_conditional_transition = NULL;
+    struct fsm_context init_context = {
+            .event = NULL,
+            .pointer = pointer,
+    };
     while (1){
         if(pointer->running != FSM_STATE_RUNNING){
             // If the pointer is asked to stopped (closing) it immediately free resources and stop
@@ -203,10 +224,22 @@ void *fsm_pointer_loop(void *_pointer) {
                 break;
             }
             // Search a transition which could be triggered by the new_event
-            reachable_transition = _fsm_get_reachable_condition(pointer->current_step->transitions, new_event);
+            reachable_transition = _fsm_get_reachable_transition(
+                    pointer->current_step->transitions, new_event);
             if (reachable_transition != NULL){
                 // If there is one pointer jump to it and continue the loop
                 ret_step = fsm_start_step(pointer, reachable_transition->next_step, new_event);
+                continue;
+            }
+            // Search for a conditional transition which could be triggered by the new event
+            reachable_conditional_transition = _fsm_get_reachable_conditional_transition(
+                    pointer->current_step->conditional_transitions, new_event);
+            if (reachable_conditional_transition != NULL){
+                // If there is a conditional transition, call it
+                init_context.event = new_event;
+                debug("RUN CONDITIONAL FUNCTION %p, %p", reachable_conditional_transition, reachable_conditional_transition->fnct);
+                ret_step = reachable_conditional_transition->fnct(&init_context);
+                debug("END RUN CONDITIONAL FUNCTION");
                 continue;
             }
             if (pointer->config.ttl_activated && fsm_time_check_absolute_time(new_event->ttl)){
@@ -238,6 +271,12 @@ void *fsm_pointer_loop(void *_pointer) {
  * */
 void _fsm_delete_a_step(fsm_step *step){
     fsm_queue_delete_queue_pointer(step->transitions);
+    #ifdef DBG_VERBOSE
+    if(step->conditional_transitions->first != NULL) {
+        debug("Clean a non empty step->conditional_transitions");
+    }
+    #endif //DBG_VERBOSE
+    fsm_queue_delete_queue_pointer(step->conditional_transitions);
     free(step);
 }
 
@@ -253,6 +292,7 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
     step->fnct = fnct;
     step->args = args;
     step->transitions = create_fsm_queue_pointer();
+    step->conditional_transitions = create_fsm_queue_pointer();
     step->out_fnct = NULL;
     step->out_args = NULL;
     step->timeout.tv_nsec = 0;
@@ -270,6 +310,17 @@ void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_ui
     strcpy(transition.event_uid, event_uid);
     // Add transition to the from transition queue
     _fsm_push_back_transition_queue(from->transitions, &transition);
+}
+
+void fsm_add_conditional_transition_to_step(struct fsm_step *step, char event_uid[65],
+                                            void *(*fnct)(struct fsm_context *)) {
+    struct fsm_conditional_transition transition = {
+            .fnct = fnct,
+    };
+    // Copy the event's UID to the transition
+    strcpy(transition.event_uid, event_uid);
+    // Copy the transition to the conditional_transitions queue
+    fsm_queue_push_back(step->conditional_transitions, (void *)&transition, sizeof(transition));
 }
 
 struct fsm_pointer *fsm_create_pointer()
@@ -442,3 +493,5 @@ void fsm_delete_a_step(fsm_step *step) {
 void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us) {
     step->timeout_us = timeout_us;
 }
+
+

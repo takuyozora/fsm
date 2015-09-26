@@ -79,10 +79,16 @@ struct fsm_transition {
     struct fsm_step *next_step;
 };
 
+struct fsm_conditional_transition {
+    char event_uid[MAX_EVENT_UID_LEN];
+    void * (*fnct)(struct fsm_context *);
+};
+
 struct fsm_step{
     void * (*fnct)(struct fsm_context *);
     void * args;
     struct fsm_queue * transitions;
+    struct fsm_queue * conditional_transitions;
     void * (*out_fnct)(struct fsm_context *);
     void * out_args;
     struct timespec timeout;
@@ -330,6 +336,15 @@ int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step
  *  If there is no transition after the given timeout an _EVENT_TIMEOUT_UID will be put in the event queue
  */
 void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us);
+
+/*! Add a conditional transition to the given step
+ *      @param step Pointer to the step
+ *      @param event_uid UID of the event which triggered the conditional transition
+ *      @param fnct Function of the conditional transition, return the next_step or NULL
+ *
+ *  If the given event_uid appears, the fnct is called with the actual context. If the function return NULL, the fsm do not change his current step. Otherwise, the fsm jump to the step returned by the function.
+ */
+void fsm_add_conditional_transition_to_step(struct fsm_step *step, char event_uid[MAX_EVENT_UID_LEN], void * (*fnct)(struct fsm_context *));
 
 /*! Useless function which return a NULL pointer to create wait steps
  *      @param context Pointer to the fsm_context in which one the function is called.
