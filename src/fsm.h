@@ -48,10 +48,10 @@
 
 #define MAX_EVENT_UID_LEN 65
 #define _EVENT_STOP_POINTER_UID "__STOP_POINTER"
-#define _EVENT_DIRECT_TRANSITION "__DIRECT"
+#define _EVENT_DIRECT_TRANSITION_UID "__DIRECT"
 #define _EVENT_START_POINTER_UID "__START_POINTER"
 #define _EVENT_OUT_ACTION_UID "__OUT_ACTION"
-#define _EVENT_TIMEOUT "__TIMEOUT"
+#define _EVENT_TIMEOUT_UID "__TIMEOUT"
 
 #define FSM_STATE_STOPPED  0
 #define FSM_STATE_RUNNING  1
@@ -327,7 +327,7 @@ int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step
  *      @param step Pointer to the step
  *      @param timeout_us Timeout in microseconds
  *
- *  If there is no transition after the given timeout an _EVENT_TIMEOUT will be put in the event queue
+ *  If there is no transition after the given timeout an _EVENT_TIMEOUT_UID will be put in the event queue
  */
 void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us);
 

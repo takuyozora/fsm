@@ -58,7 +58,7 @@ struct fsm_event *_fsm_get_event_or_wait(struct fsm_pointer *pointer) {
             if(pthread_cond_timedwait(&pointer->cond_event, &pointer->input_event.mutex, &pointer->current_step->timeout) == ETIMEDOUT){
                 // If no event occurs and timeout raised
                 pthread_mutex_unlock(&pointer->input_event.mutex);
-                return fsm_generate_event(_EVENT_TIMEOUT, NULL);
+                return fsm_generate_event(_EVENT_TIMEOUT_UID, NULL);
             }
         }
     }
@@ -186,7 +186,8 @@ void *fsm_pointer_loop(void *_pointer) {
         }
         if(pointer->current_step->transitions->first != NULL){
             // Check if there isn't a direct transition to perform
-            if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid, _EVENT_DIRECT_TRANSITION) == 0){
+            if(strcmp(((struct fsm_transition *)(pointer->current_step->transitions->first->value))->event_uid,
+                      _EVENT_DIRECT_TRANSITION_UID) == 0){
                 // Then we direct go to next step
                 ret_step = fsm_start_step(pointer, ((struct fsm_transition *)
                         (pointer->current_step->transitions->first->value))->next_step, new_event);
@@ -217,6 +218,15 @@ void *fsm_pointer_loop(void *_pointer) {
             // Otherwise it will wait for a new event
         }
         // Condition
+    }
+    if (pointer->current_step->out_fnct != NULL){
+        // If there is an out action to perform we call it before anything else
+        struct fsm_context out_action_context = {
+                .event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL),
+                .pointer = pointer,
+        };
+        pointer->current_step->out_fnct(&out_action_context);
+        free(out_action_context.event);
     }
     return NULL;
 }

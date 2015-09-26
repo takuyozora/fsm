@@ -178,7 +178,7 @@ void test_fsm_direct_transition(void **state){
     struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
 
-    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION_UID);
 
     fsm_start_pointer(fsm, step_0);
     assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, 1000), 0);
@@ -198,7 +198,7 @@ void test_fsm_memory_persistence(void **state){
     };
     struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step_1 = fsm_create_step(callback_create_fsm, (void *) &data);
-    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION_UID);
     fsm_start_pointer(fsm_base, step_0);
     fsm_wait_step_blocking(fsm_base, step_1);
     fsm_join_pointer(fsm_base);
@@ -285,7 +285,7 @@ void test_fsm_simple_timeout(void **state){
     struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
     fsm_connect_step(step_0, step_1, "STEP1");
-    fsm_connect_step(step_0, step_2, _EVENT_TIMEOUT);
+    fsm_connect_step(step_0, step_2, _EVENT_TIMEOUT_UID);
     fsm_connect_step(step_1, step_0, "STEP0");
     fsm_connect_step(step_2, step_0, "STEP0");
     fsm_set_timeout_to_step(step_0, 100000); // Wait 100ms

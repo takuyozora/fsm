@@ -63,8 +63,8 @@ void benchmark_fsm_direct_transitions(void **state){
     struct fsm_step *step_0 = fsm_create_step(callback_increment_int_from_step, (void *) &i);
     struct fsm_step *step_1 = fsm_create_step(callback_increment_int_from_step, (void *) &i);
 
-    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
-    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION_UID);
+    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION_UID);
 
     double start_time = bm_get_clock();
     fsm_start_pointer(fsm, step_0);
@@ -119,8 +119,8 @@ void test_fsm_break_direct_loop(void **state){
     struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
 
-    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION);
-    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_0, step_1, _EVENT_DIRECT_TRANSITION_UID);
+    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION_UID);
 
     fsm_start_pointer(fsm, step_0);
     assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, 100), 0);
