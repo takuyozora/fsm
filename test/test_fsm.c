@@ -252,6 +252,32 @@ void test_fsm_ttl(void **state){
     fsm_delete_all_steps();
 }
 
+void test_fsm_out_action(void **state){
+    struct fsm_pointer *fsm = fsm_create_pointer();
+    int value = 0;
+    struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, (void *) &value);
+    step_0->out_fnct = callback_set_int_from_step_to_42;
+    struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
+    fsm_connect_step(step_0, step_1, "STEP1");
+    fsm_connect_step(step_0, step_2, "STEP2");
+    fsm_connect_step(step_1, step_0, _EVENT_DIRECT_TRANSITION);
+    fsm_connect_step(step_2, step_0, _EVENT_DIRECT_TRANSITION);
+    fsm_start_pointer(fsm, step_0);
+    assert_int_equal(value, 0);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP1", NULL));
+    fsm_wait_step_mstimeout(fsm,step_1,3000);
+    assert_int_equal(value, 42);
+    value = 1;
+    assert_int_equal(value, 1);
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP2", NULL));
+    fsm_wait_step_mstimeout(fsm,step_2,3000);
+    assert_int_equal(value, 42);
+    fsm_join_pointer(fsm);
+    fsm_delete_pointer(fsm);
+    fsm_delete_all_steps();
+}
+
 
 int main(void)
 {
@@ -265,6 +291,7 @@ int main(void)
             cmocka_unit_test(test_fsm_direct_transition),
             cmocka_unit_test(test_fsm_memory_persistence),
             cmocka_unit_test(test_fsm_ttl),
+            cmocka_unit_test(test_fsm_out_action),
     };
 
     int rc = cmocka_run_group_tests(tests, NULL, NULL);

@@ -122,7 +122,16 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
     pthread_mutex_lock(&pointer->mutex);
     pointer->current_step = step;
     if(pointer->running == FSM_STATE_STARTING) {
+        // If it's the first step to be run, FSM is now running
         pointer->running = FSM_STATE_RUNNING;
+    }else if (pointer->current_step->out_fnct != NULL){
+        // If there is an out action to perform we call it before anything else
+        struct fsm_context out_action_context = {
+                .event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL),
+                .pointer = pointer,
+        };
+        step->out_fnct(&out_action_context);
+        free(out_action_context.event);
     }
     pthread_cond_broadcast(&pointer->cond_event);
     pthread_mutex_unlock(&pointer->mutex);
@@ -222,6 +231,8 @@ struct fsm_step *fsm_create_step(void *(*fnct)(struct fsm_context *), void *args
     step->fnct = fnct;
     step->args = args;
     step->transitions = create_fsm_queue_pointer();
+    step->out_fnct = NULL;
+    step->out_args = NULL;
     return step;
 }
 

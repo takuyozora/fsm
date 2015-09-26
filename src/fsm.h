@@ -50,6 +50,7 @@
 #define _EVENT_STOP_POINTER_UID "__STOP_POINTER"
 #define _EVENT_DIRECT_TRANSITION "__DIRECT"
 #define _EVENT_START_POINTER_UID "__START_POINTER"
+#define _EVENT_OUT_ACTION_UID "__OUT_ACTION"
 
 #define FSM_STATE_STOPPED  0
 #define FSM_STATE_RUNNING  1
@@ -57,6 +58,8 @@
 #define FSM_STATE_CLOSING  3
 
 #define FSM_ERR_NOT_STOPPED 1
+
+
 
 struct fsm_event
 {
@@ -79,6 +82,8 @@ struct fsm_step{
     void * (*fnct)(struct fsm_context *);
     void * args;
     struct fsm_queue * transitions;
+    void * (*out_fnct)(struct fsm_context *);
+    void * out_args;
 };
 
 struct fsm_config_pointer {
@@ -321,6 +326,7 @@ int fsm_wait_leaving_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step
  *  @retval NULL
  *  */
 void * fsm_null_callback(struct fsm_context *context);
+
 
 
 #endif //FSM_NEW_FSM_H
