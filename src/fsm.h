@@ -72,6 +72,7 @@ struct fsm_event
 struct fsm_context{
     struct fsm_event * event;
     struct fsm_pointer *pointer;
+    void* fnct_arg;
 };
 
 struct fsm_transition {
@@ -81,7 +82,12 @@ struct fsm_transition {
 
 struct fsm_conditional_transition {
     char event_uid[MAX_EVENT_UID_LEN];
-    void * (*fnct)(struct fsm_context *);
+    struct fsm_conditional_move (*fnct)(struct fsm_context *);
+};
+
+struct fsm_conditional_move {
+    bool step;
+    void *move;
 };
 
 struct fsm_step{
@@ -344,7 +350,11 @@ void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us);
  *
  *  If the given event_uid appears, the fnct is called with the actual context. If the function return NULL, the fsm do not change his current step. Otherwise, the fsm jump to the step returned by the function.
  */
-void fsm_add_conditional_transition_to_step(struct fsm_step *step, char event_uid[MAX_EVENT_UID_LEN], void * (*fnct)(struct fsm_context *));
+void fsm_add_conditional_transition_to_step(struct fsm_step *step, char event_uid[MAX_EVENT_UID_LEN], struct fsm_conditional_move (*fnct)(struct fsm_context *));
+
+struct fsm_conditional_move fsm_cond_return_step(fsm_step * step);
+
+struct fsm_conditional_move fsm_cond_return_conditional_transition(struct fsm_conditional_move (*fnct)(struct fsm_context *));
 
 /*! Useless function which return a NULL pointer to create wait steps
  *      @param context Pointer to the fsm_context in which one the function is called.

@@ -22,7 +22,7 @@
 #define AVG_WAIT_STEP_TIMEOUT_MS 500
 
 void *callback_set_int_from_step_to_42(struct fsm_context *context){
-    *(int *)context->pointer->current_step->args = 42;
+    *(int *)context->fnct_arg = 42;
     return NULL;
 }
 
@@ -36,8 +36,8 @@ void *callback_return_step_from_event(struct fsm_context *context){
 }
 
 void *callback_increment_int_from_step(struct fsm_context *context){
-    if (*(int *)context->pointer->current_step->args < MAX_INCREMENT_CALLBACK) {
-        (*(int *) context->pointer->current_step->args)++;
+    if (*(int *)context->fnct_arg < MAX_INCREMENT_CALLBACK) {
+        (*(int *) context->fnct_arg)++;
     }else{
         fsm_queue_cleanup(context->pointer->current_step->transitions);
     }
@@ -47,16 +47,33 @@ void *callback_increment_int_from_step(struct fsm_context *context){
 struct fsm_step *callback_pointer_step_1 = NULL;
 struct fsm_step *callback_pointer_step_2 = NULL;
 
-void *callback_condtrans_step1_or_2(struct fsm_context *context){
+struct fsm_conditional_move callback_condtrans_step1_or_2(struct fsm_context *context){
     if(*(int *)context->event->args == 1){
-        return callback_pointer_step_1;
+        return fsm_cond_return_step(callback_pointer_step_1);
     }else if (*(int *)context->event->args == 2){
-        return callback_pointer_step_2;
+        return fsm_cond_return_step(callback_pointer_step_2);
     }else{
-        return NULL;
+        return fsm_cond_return_step(NULL);
     }
 }
 
+struct fsm_conditional_move callback_condtrans_step_or_cond_next(struct fsm_context *context){
+    if(*(int *)context->event->args == 2){
+        return fsm_cond_return_step(callback_pointer_step_2);
+    }else{
+        return fsm_cond_return_step(NULL);
+    }
+}
+
+struct fsm_conditional_move callback_condtrans_step_or_cond(struct fsm_context *context){
+    if(*(int *)context->event->args == 1){
+        return fsm_cond_return_step(callback_pointer_step_1);
+    }else if (*(int *)context->event->args > 1){
+        return fsm_cond_return_conditional_transition(callback_condtrans_step_or_cond_next);
+    }else{
+        return fsm_cond_return_step(NULL);
+    }
+}
 
 struct create_fsm{
     struct fsm_pointer **pointer;
@@ -64,7 +81,7 @@ struct create_fsm{
 };
 
 void *callback_create_fsm(struct fsm_context *context){
-    struct create_fsm *data =((struct create_fsm *)context->pointer->current_step->args);
+    struct create_fsm *data =((struct create_fsm *)context->fnct_arg);
     *data->pointer = fsm_create_pointer();
     struct fsm_step *step0 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step1 = fsm_create_step(callback_set_int_from_step_to_42, data->data);
@@ -272,8 +289,9 @@ void test_fsm_ttl(void **state){
 void test_fsm_out_action(void **state){
     struct fsm_pointer *fsm = fsm_create_pointer();
     int value = 0;
-    struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, (void *) &value);
+    struct fsm_step *step_0 = fsm_create_step(fsm_null_callback, NULL);
     step_0->out_fnct = callback_set_int_from_step_to_42;
+    step_0->out_args = (void *) &value;
     struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
     struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
     fsm_connect_step(step_0, step_1, "STEP1");
@@ -359,6 +377,45 @@ void test_fsm_simple_conditional_transition(void **state){
     fsm_delete_all_steps();
 }
 
+void test_fsm_multiple_conditional_transition(void **state){
+    struct fsm_pointer *fsm = fsm_create_pointer();
+    int signal = 0;
+    int value = 0;
+    struct fsm_step *step_0 = fsm_create_step(callback_set_int_from_step_to_42, (void *)&value);
+    struct fsm_step *step_1 = fsm_create_step(fsm_null_callback, NULL);
+    struct fsm_step *step_2 = fsm_create_step(fsm_null_callback, NULL);
+    callback_pointer_step_1 = step_1;
+    callback_pointer_step_2 = step_2;
+
+    fsm_add_conditional_transition_to_step(step_0, "GO", callback_condtrans_step_or_cond);
+    fsm_connect_step(step_1, step_0, "STEP0");
+    fsm_connect_step(step_2, step_0, "STEP0");
+    fsm_start_pointer(fsm, step_0);
+
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_0, AVG_WAIT_STEP_TIMEOUT_MS), ETIMEDOUT);
+    signal = 1;
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", (void *)&signal));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_1, AVG_WAIT_STEP_TIMEOUT_MS), ETIMEDOUT);
+
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP0", NULL));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_0, AVG_WAIT_STEP_TIMEOUT_MS), ETIMEDOUT);
+    signal = 2;
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", (void *)&signal));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_2, AVG_WAIT_STEP_TIMEOUT_MS), ETIMEDOUT);
+
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("STEP0", NULL));
+    assert_int_not_equal(fsm_wait_step_mstimeout(fsm, step_0, AVG_WAIT_STEP_TIMEOUT_MS), ETIMEDOUT);
+    signal = 0;
+    value = 0;
+    fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", (void *)&signal));
+    assert_int_equal(value, 0);
+
+
+    fsm_join_pointer(fsm);
+    fsm_delete_pointer(fsm);
+    fsm_delete_all_steps();
+}
+
 
 
 int main(void)
@@ -376,6 +433,7 @@ int main(void)
             cmocka_unit_test(test_fsm_out_action),
             cmocka_unit_test(test_fsm_simple_timeout),
             cmocka_unit_test(test_fsm_simple_conditional_transition),
+            cmocka_unit_test(test_fsm_multiple_conditional_transition),
     };
 
     int rc = cmocka_run_group_tests(tests, NULL, NULL);

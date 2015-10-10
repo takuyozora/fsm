@@ -142,6 +142,7 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
     struct fsm_context init_context = {
             .event = event,
             .pointer = pointer,
+            .fnct_arg = step->args,
     };
     pthread_mutex_lock(&pointer->mutex);
     if(pointer->running == FSM_STATE_STARTING) {
@@ -152,6 +153,7 @@ struct fsm_step *fsm_start_step(struct fsm_pointer *pointer, struct fsm_step *st
         struct fsm_context out_action_context = {
                 .event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL),
                 .pointer = pointer,
+                .fnct_arg = pointer->current_step->out_args,
         };
         pointer->current_step->out_fnct(&out_action_context);
         free(out_action_context.event);
@@ -190,9 +192,12 @@ void *fsm_pointer_loop(void *_pointer) {
     // Now the pointer is running
     struct fsm_transition * reachable_transition = NULL;
     struct fsm_conditional_transition * reachable_conditional_transition = NULL;
+    struct fsm_conditional_move (*conditional_fnct)(struct fsm_context *) = NULL;
+    struct fsm_conditional_move conditional_move;
     struct fsm_context init_context = {
             .event = NULL,
             .pointer = pointer,
+            .fnct_arg = NULL,
     };
     while (1){
         if(pointer->running != FSM_STATE_RUNNING){
@@ -237,8 +242,19 @@ void *fsm_pointer_loop(void *_pointer) {
             if (reachable_conditional_transition != NULL){
                 // If there is a conditional transition, call it
                 init_context.event = new_event;
+                init_context.fnct_arg = NULL;
                 debug("RUN CONDITIONAL FUNCTION %p, %p", reachable_conditional_transition, reachable_conditional_transition->fnct);
-                ret_step = reachable_conditional_transition->fnct(&init_context);
+                conditional_fnct = reachable_conditional_transition->fnct;
+                while(true){
+                    conditional_move = conditional_fnct((&init_context));
+                    if(conditional_move.step){
+                        ret_step = (struct fsm_step *)conditional_move.move;
+                        break;
+                    }else{
+                        conditional_fnct = conditional_move.move;
+                    }
+                }
+                //ret_step = reachable_conditional_transition->fnct(&init_context);
                 debug("END RUN CONDITIONAL FUNCTION");
                 continue;
             }
@@ -254,12 +270,10 @@ void *fsm_pointer_loop(void *_pointer) {
     }
     if (pointer->current_step->out_fnct != NULL){
         // If there is an out action to perform we call it before anything else
-        struct fsm_context out_action_context = {
-                .event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL),
-                .pointer = pointer,
-        };
-        pointer->current_step->out_fnct(&out_action_context);
-        free(out_action_context.event);
+        init_context.event = fsm_generate_event(_EVENT_OUT_ACTION_UID, NULL);
+        init_context.fnct_arg = pointer->current_step->out_args;
+        pointer->current_step->out_fnct(&init_context);
+        free(init_context.event);
     }
     return NULL;
 }
@@ -313,7 +327,7 @@ void fsm_connect_step(struct fsm_step *from, struct fsm_step *to, char *event_ui
 }
 
 void fsm_add_conditional_transition_to_step(struct fsm_step *step, char event_uid[65],
-                                            void *(*fnct)(struct fsm_context *)) {
+                                            struct fsm_conditional_move (*fnct)(struct fsm_context *)) {
     struct fsm_conditional_transition transition = {
             .fnct = fnct,
     };
@@ -495,3 +509,17 @@ void fsm_set_timeout_to_step(struct fsm_step *step, int timeout_us) {
 }
 
 
+struct fsm_conditional_move fsm_cond_return_step(fsm_step *step) {
+    struct fsm_conditional_move result;
+    result.step = true;
+    result.move = (void *)step;
+    return result;
+}
+
+struct fsm_conditional_move fsm_cond_return_conditional_transition(
+        struct fsm_conditional_move (*fnct)(struct fsm_context *)) {
+    struct fsm_conditional_move result;
+    result.step = false;
+    result.move = (void *)fnct;
+    return result;
+}
