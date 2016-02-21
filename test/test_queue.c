@@ -89,7 +89,7 @@ void test_queue_signal(void **state){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const struct CMUnitTest tests[] = {
+    const struct CMUnitTest tests[2] = {
             cmocka_unit_test(test_queue_push_pop_order),
             cmocka_unit_test(test_queue_signal)
     };

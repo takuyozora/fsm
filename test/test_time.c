@@ -76,7 +76,7 @@ void test_time_check_absolute_time(void **state){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const struct CMUnitTest tests[] = {
+    const struct CMUnitTest tests[4] = {
             cmocka_unit_test(test_time_delta_overflow),
             cmocka_unit_test(test_time_delta),
             cmocka_unit_test(test_time_get_abs_fixed_time_from_us),

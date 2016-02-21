@@ -421,7 +421,7 @@ void test_fsm_multiple_conditional_transition(void **state){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const struct CMUnitTest tests[] = {
+    const struct CMUnitTest tests[11] = {
             cmocka_unit_test(test_fsm_start_stop),
             cmocka_unit_test(test_fsm_rand_transition),
             cmocka_unit_test(test_fsm_passing_value_by_step),
