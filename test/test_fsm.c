@@ -19,7 +19,7 @@
 #include "fsm_debug.h"
 
 #define MAX_INCREMENT_CALLBACK 100000
-#define AVG_WAIT_STEP_TIMEOUT_MS 500
+#define AVG_WAIT_STEP_TIMEOUT_MS 1500
 
 void *callback_set_int_from_step_to_42(struct fsm_context *context){
     *(int *)context->fnct_arg = 42;
@@ -260,7 +260,7 @@ void test_fsm_ttl(void **state){
     fsm_signal_pointer_of_event(fsm, fsm_generate_event("NEXT", NULL));
     fsm_signal_pointer_of_event(fsm, fsm_generate_event("GO", NULL));
 
-    assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, INT_MAX), 0);
+    assert_int_equal(fsm_wait_step_mstimeout(fsm, step_1, AVG_WAIT_STEP_TIMEOUT_MS), 0);
 
     fsm_join_pointer(fsm);
     fsm_delete_pointer(fsm);
