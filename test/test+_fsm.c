@@ -133,7 +133,7 @@ void test_fsm_break_direct_loop(void **state){
 int main(void)
 {
     srand ((unsigned int) time(NULL));
-    const struct CMUnitTest tests[] = {
+    const struct CMUnitTest tests[3] = {
             cmocka_unit_test(test_fsm_break_direct_loop),
             cmocka_unit_test(benchmark_fsm_direct_transitions),
             cmocka_unit_test(benchmark_fsm_ping_pong_transitions),
