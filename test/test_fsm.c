@@ -19,7 +19,7 @@
 #include "fsm_debug.h"
 
 #define MAX_INCREMENT_CALLBACK 100000
-#define AVG_WAIT_STEP_TIMEOUT_MS 1500
+#define AVG_WAIT_STEP_TIMEOUT_MS 1500       // If some test fail in valrgind, try to up this value
 
 void *callback_set_int_from_step_to_42(struct fsm_context *context){
     *(int *)context->fnct_arg = 42;
