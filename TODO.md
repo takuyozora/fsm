@@ -7,3 +7,5 @@ Only if we need some speed improvement.
 transition) maybe with the running var ? 0: stopped, 1: running, 2: stopping. 
 
 [ ] Write more documentation
+
+[ ] Write more test to have a better coverage
