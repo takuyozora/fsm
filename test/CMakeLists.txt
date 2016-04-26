@@ -1,7 +1,7 @@
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 include_directories ("${PROJECT_SOURCE_DIR}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -fPIC -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -fPIC -O0 -pg")
 
 add_executable(test_queue test_queue.c
 ${PROJECT_SOURCE_DIR}/src/fsm_queue.c
