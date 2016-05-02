@@ -11,6 +11,9 @@
 #include "fsm.h"
 #include "fsm_debug.h"
 
+#define NONE_VARIABLE 0
+#define NONE_VARIABLE 1
+
 // Global var to keep a trace of all steps created in order to free them at the end
 static struct fsm_queue *_all_steps_created = NULL;
 
