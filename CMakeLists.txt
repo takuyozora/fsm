@@ -11,3 +11,8 @@ set(SOURCE_FILES main.c)
 
 
 add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/fsm_queue.c  src/fsm_debug.h /usr/include/time.h src/fsm_time.h src/fsm_time.c)
+
+add_library(fsm SHARED src/fsm.c src/fsm_queue.c src/fsm_time.c)
+
+install(TARGETS fsm DESTINATION lib)
+install(FILES src/fsm.h DESTINATION ../include/cfsm)
