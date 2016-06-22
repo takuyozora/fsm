@@ -59,7 +59,11 @@ struct fsm_event *_fsm_get_event_or_wait(struct fsm_pointer *pointer) {
     while(pointer->input_event.first == NULL) {
         if (pointer->current_step->timeout_us == 0) {
             pthread_cond_wait(&pointer->input_event.cond, &pointer->input_event.mutex);
-        }else{
+        }else if (pointer->current_step->timeout_us < 0){
+            // Instant return timeout
+            pthread_mutex_unlock(&pointer->input_event.mutex);
+            return fsm_generate_event(_EVENT_TIMEOUT_UID, NULL);
+        } else{
             if(pthread_cond_timedwait(&pointer->cond_event, &pointer->input_event.mutex, &pointer->current_step->timeout) == ETIMEDOUT){
                 // If no event occurs and timeout raised
                 pthread_mutex_unlock(&pointer->input_event.mutex);
