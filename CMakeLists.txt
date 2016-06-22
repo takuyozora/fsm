@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
+SET(CMAKE_INSTALL_PREFIX /usr)
 project(fsm)
 enable_testing()
 
@@ -15,7 +16,7 @@ add_executable(fsm_main ${SOURCE_FILES} src/fsm.h src/fsm.c src/fsm_queue.h src/
 add_library(fsm SHARED src/fsm.c src/fsm_queue.c src/fsm_time.c)
 
 install(TARGETS fsm DESTINATION lib)
-install(FILES src/fsm.h DESTINATION ../include/cfsm)
-install(FILES src/fsm_time.h DESTINATION ../include/cfsm)
-install(FILES src/fsm_queue.h DESTINATION ../include/cfsm)
-install(FILES src/fsm_debug.h DESTINATION ../include/cfsm)
+install(FILES src/fsm.h DESTINATION include/cfsm)
+install(FILES src/fsm_time.h DESTINATION include/cfsm)
+install(FILES src/fsm_queue.h DESTINATION include/cfsm)
+install(FILES src/fsm_debug.h DESTINATION include/cfsm)
