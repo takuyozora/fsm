@@ -363,6 +363,7 @@ struct fsm_pointer *fsm_create_pointer_config(struct fsm_config_pointer config) 
     check(ret == 0, "IMPOSSIBLE TO SET MONOTONIC CLOCK : ABORT, error %d", ret);
     //
     pointer->config = config;
+    pointer->data = NULL;
     pointer->input_event = create_fsm_queue();
     if(config.ttl_activated){
         pointer->ttl_event = create_fsm_queue_pointer();

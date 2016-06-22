@@ -114,6 +114,7 @@ struct fsm_pointer{
     struct fsm_queue * ttl_event;
     struct fsm_step * current_step;
     unsigned short running;
+    void *data;
 };
 
 typedef struct fsm_pointer fsm_pointer;
