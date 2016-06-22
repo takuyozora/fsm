@@ -466,15 +466,15 @@ int _fsm_wait_step_mstimeout(struct fsm_pointer *pointer, struct fsm_step *step,
     struct timespec ts = fsm_time_get_abs_fixed_time_from_us(mstimeout*1000);
     int rc = 0;
 
-    pthread_mutex_lock(&pointer->input_event.mutex);
+    pthread_mutex_lock(&pointer->mutex);
     // Wait that the given step become the current one or the opposite according to the leave value
     while ( (pointer->current_step == step && leave == 1) || (pointer->current_step != step && leave == 0) ){
-        rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->input_event.mutex, &ts);
+        rc = pthread_cond_timedwait(&pointer->cond_event, &pointer->mutex, &ts);
         if (rc == ETIMEDOUT){
             break;
         }
     }
-    pthread_mutex_unlock(&pointer->input_event.mutex);
+    pthread_mutex_unlock(&pointer->mutex);
     return rc;
 }
 
